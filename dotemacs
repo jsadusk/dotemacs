@@ -48,6 +48,7 @@
 (tool-bar-mode -1)
 
 (setq auto-mode-alist (append '(("\\.\\(bzl\\)$" . bazel-mode))  auto-mode-alist ))
+(setq auto-mode-alist (append '(("dotemacs$" . lisp-mode))  auto-mode-alist ))
 
 (autoload 'perl-mode "cperl-mode" "alternate mode for editing Perl programs" t)
 
@@ -127,7 +128,6 @@
 
 (dolist (this-frame (frame-list))
   (select-frame this-frame)
-  (set-frame-font "Inconsolata-10")
   (smart-split))
 
 (add-hook 'focus-in-hook '(lambda ()
