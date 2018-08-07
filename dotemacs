@@ -1,0 +1,162 @@
+(require 'tramp)
+(require 'generic-x)
+(require 'notifications)
+(require 'subr-x)
+
+(add-to-list 'default-frame-alist '(background-color . "black"))
+(add-to-list 'default-frame-alist '(foreground-color . "grey"))
+(add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
+
+(add-to-list 'load-path "~/.elisp/")
+
+(load "~/.elisp/setup-frames.el")
+(setup-frames)
+
+;; Added by Package.el.  This must come before configurations of
+;; installed packages.  Don't delete this line.  If you don't want it,
+;; just comment it out by adding a semicolon to the start of the line.
+;; You may delete these explanatory comments.
+(package-initialize)
+
+(defun smart-split ()
+  "Split the frame into 80-column sub-windows, and make sure no window has
+   fewer than 80 columns."
+  (interactive)
+  (defun smart-split-helper (w)
+    "Helper function to split a given window into two, the first of which has 
+     80 columns."
+    (if (> (window-width w) (* 2 81))
+    (let ((w2 (split-window w 83 t)))
+      (smart-split-helper w2))))
+  (smart-split-helper nil))
+
+(set-default-font "Inconsolata-10")
+
+(require 'package)
+(add-to-list 'package-archives
+             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+
+(setq column-number-mode t)
+;(setq pending-delete-mode t nil)
+(setq line-number-mode t)
+(setq mouse-yank-at-point t)
+(setq indent-tabs-mode nil)
+(setq tab-width 4)
+(global-font-lock-mode)
+(menu-bar-mode -1)
+(toggle-scroll-bar -1)
+(tool-bar-mode -1)
+
+(setq auto-mode-alist (append '(("\\.\\(bzl\\)$" . bazel-mode))  auto-mode-alist ))
+
+(autoload 'perl-mode "cperl-mode" "alternate mode for editing Perl programs" t)
+
+(setq cperl-indent-level 4)
+(setq auto-mode-alist (append '(("\\.\\([pP][Llm]\\|al\\|t\\)$" . cperl-mode))  auto-mode-alist ))
+(setq interpreter-mode-alist (append interpreter-mode-alist '(("perl" . cperl-mode))))
+
+(setq auto-mode-alist (append '(("\\.xsd$" . sgml-mode)) auto-mode-alist ))
+
+(add-hook 'cperl-mode-hook
+	  '(lambda ()
+             (setq tab-width 4 indent-tabs-mode nil)
+	     )
+	  )
+(add-hook 'perl-mode-hook
+	  '(lambda ()
+             (setq tab-width 4 indent-tabs-mode nil)
+	     )
+	  )
+
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+(setq truncate-partial-width-windows nil)
+
+(setq c-basic-offset 4)
+(server-start)
+(global-font-lock-mode)
+(global-set-key [(control tab)] 'other-window)
+(global-set-key [(control shift tab)] 'other-frame)
+(global-set-key [(control /)] 'compile)
+(global-set-key [(control =)] 'copy-region-as-kill)
+(show-paren-mode)
+(transient-mark-mode t)
+
+(eval-after-load 'company
+  (lambda ()
+    (delete 'company-clang company-backends)
+    (add-to-list 'company-backends 'company-irony)))
+(setq company-clang-executable "~/work/cruise/tools/toolchain/wrappers/clang")
+
+(defconst my-cc-style
+  '("gnu"
+    (c-offsets-alist . ((innamespace [0])
+			(inextern-lang .[0])
+			(arglist-intro . [6])))))
+(c-add-style "my-cc-style" my-cc-style)
+(add-hook 'c++-mode-hook
+	  '(lambda ()
+	     (c-set-style "my-cc-style")
+	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
+	     (setq compile-command "cd /home/jsadusk/work/cruise; bazel build //...")))
+(add-hook 'c++-mode-hook 'company-mode)
+(add-hook 'c-mode-hook
+	  '(lambda ()
+	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
+
+(global-unset-key [(meta g)])
+(global-set-key [(meta g)] 'goto-line)
+
+(if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
+
+(require 'clang-format)
+(global-set-key (kbd "C-c i") 'clang-format-region)
+(global-set-key (kbd "C-c u") 'clang-format-buffer)
+
+(setq clang-format-executable "/usr/local/bin/clang-format")
+(defun clang-format-before-save ()
+  "Add this to .emacs to clang-format on save
+ (add-hook 'before-save-hook 'clang-format-before-save)."
+ 
+ 
+  (interactive)
+  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
+ 
+ 
+;; Install hook to use clang-format on save
+(add-hook 'before-save-hook 'clang-format-before-save)
+
+(dolist (this-frame (frame-list))
+  (select-frame this-frame)
+  (set-frame-font "Inconsolata-10")
+  (smart-split))
+
+(add-hook 'focus-in-hook '(lambda ()
+			    (setq frame-has-focus 1)))
+(add-hook 'focus-out-hook '(lambda ()
+			    (setq frame-has-focus nil)))
+
+(defun my-compilation-finish-function (buffer desc)
+  (if (string-match "^finished" desc)
+      (setq notify-msg "Compilation finished")
+    (setq notify-msg (concat "Compilation failed: " (string-trim desc)))
+    )
+  (if frame-has-focus
+      (message notify-msg)
+    (notifications-notify :title notify-msg)))
+
+(add-hook 'compilation-finish-functions 'my-compilation-finish-function)
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   (quote
+    (bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
