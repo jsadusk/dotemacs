@@ -47,8 +47,10 @@
 (toggle-scroll-bar -1)
 (tool-bar-mode -1)
 
-(setq auto-mode-alist (append '(("\\.\\(bzl\\)$" . bazel-mode))  auto-mode-alist ))
-(setq auto-mode-alist (append '(("dotemacs$" . lisp-mode))  auto-mode-alist ))
+(add-to-list 'auto-mode-alist ("\\.bzl$" . bazel-mode))
+(add-to-list 'auto-mode-alist("dotemacs$" . lisp-mode))
+(add-to-list 'auto-mode-alist("\\.template$" . jinja2-mode))
+(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
 (autoload 'perl-mode "cperl-mode" "alternate mode for editing Perl programs" t)
 
@@ -153,7 +155,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
+    (yaml-mode jinja2-mode bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
