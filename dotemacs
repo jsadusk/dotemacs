@@ -41,11 +41,13 @@
 (setq line-number-mode t)
 (setq mouse-yank-at-point t)
 (setq indent-tabs-mode nil)
+(setq-default indent-tabs-mode nil)
 (setq tab-width 4)
 (global-font-lock-mode)
 (menu-bar-mode -1)
 (toggle-scroll-bar -1)
 (tool-bar-mode -1)
+(setq-default display-buffer-reuse-frames t)
 
 (add-to-list 'auto-mode-alist ("\\.bzl$" . bazel-mode))
 (add-to-list 'auto-mode-alist("dotemacs$" . lisp-mode))
@@ -100,7 +102,7 @@
 	  '(lambda ()
 	     (c-set-style "my-cc-style")
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
-	     (setq compile-command "cd /home/jsadusk/work/cruise; bazel build //...")))
+	     (setq compile-command "cd /home/jsadusk/work/cruise; bazel build --verbose_failures //...")))
 (add-hook 'c++-mode-hook 'company-mode)
 (add-hook 'c-mode-hook
 	  '(lambda ()
