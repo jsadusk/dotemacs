@@ -50,6 +50,7 @@
 (setq-default display-buffer-reuse-frames t)
 
 (add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
+(add-to-list 'auto-mode-alist '("BUILD$" . bazel-mode))
 (add-to-list 'auto-mode-alist '("dotemacs$" . lisp-mode))
 (add-to-list 'auto-mode-alist '("\\.template$" . jinja2-mode))
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
@@ -157,7 +158,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (yaml-mode jinja2-mode bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
+    (use-package slack websocket request oauth2 emojify circe alert yaml-mode jinja2-mode bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
