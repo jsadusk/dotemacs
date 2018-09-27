@@ -36,16 +36,28 @@
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 
- (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
+(add-to-list 'load-path "~/.emacs.d/el-get/el-get")
+(unless (require 'el-get nil 'noerror)
+  (with-current-buffer
+      (url-retrieve-synchronously
+       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
+    (goto-char (point-max))
+    (eval-print-last-sexp)))
+(add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 
- (unless (require 'el-get nil 'noerror)
-   (with-current-buffer
-       (url-retrieve-synchronously
-        "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-     (goto-char (point-max))
-     (eval-print-last-sexp)))
- (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
+(require 'el-get-elpa)
+(unless (file-directory-p el-get-recipe-path-elpa)
+  (el-get-elpa-build-local-recipes))
+(add-to-list 'el-get-recipe-path el-get-recipe-path-elpa)
+(package-initialize)
 (el-get 'sync)
+(el-get-install "company-irony")
+(el-get-install	"bazel-mode")
+(el-get-install "cmake-mode")
+(el-get-install "flycheck")
+(el-get-install "flycheck-irony")
+(el-get-install "jinja2-mode")
+(el-get-install "yaml-mode")
 
 (setq column-number-mode t)
 ;(setq pending-delete-mode t nil)
@@ -94,7 +106,7 @@
 (global-font-lock-mode)
 (global-set-key [(control tab)] 'other-window)
 (global-set-key [(control shift tab)] 'other-frame)
-(global-set-key [(control /)] 'compile)
+;(global-set-key [(control /)] 'mycompile)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (show-paren-mode)
 (transient-mark-mode t)
@@ -103,7 +115,9 @@
   (lambda ()
     (delete 'company-clang company-backends)
     (add-to-list 'company-backends 'company-irony)))
-(setq company-clang-executable "~/work/cruise/tools/toolchain/wrappers/clang")
+
+(eval-after-load 'flycheck
+  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 
 (defconst my-cc-style
   '("gnu"
@@ -116,6 +130,7 @@
 	     (c-set-style "my-cc-style")
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
 (add-hook 'c++-mode-hook 'company-mode)
+(add-hook 'c++-mode-hook 'flycheck-mode)
 (add-hook 'c-mode-hook
 	  '(lambda ()
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
@@ -162,3 +177,15 @@
 
 (add-hook 'compilation-finish-functions 'my-compilation-finish-function)
 
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages (quote (magit bazel-mode el-get))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
