@@ -1,66 +1,68 @@
-(require 'tramp)
-(require 'generic-x)
-(require 'notifications)
-(require 'subr-x)
-
-(add-to-list 'default-frame-alist '(background-color . "black"))
-(add-to-list 'default-frame-alist '(foreground-color . "grey"))
-(add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-
-(add-to-list 'load-path "~/.elisp/")
-
-(load "~/.elisp/setup-frames.el")
-(setup-frames)
-
-;; Added by Package.el.  This must come before configurations of
-;; installed packages.  Don't delete this line.  If you don't want it,
-;; just comment it out by adding a semicolon to the start of the line.
-;; You may delete these explanatory comments.
-(package-initialize)
-
-(defun smart-split ()
-  "Split the frame into 80-column sub-windows, and make sure no window has
-   fewer than 80 columns."
-  (interactive)
-  (defun smart-split-helper (w)
-    "Helper function to split a given window into two, the first of which has 
-     80 columns."
-    (if (> (window-width w) (* 2 81))
-    (let ((w2 (split-window w 83 t)))
-      (smart-split-helper w2))))
-  (smart-split-helper nil))
-
-(set-default-font "Inconsolata-10")
-
 (require 'package)
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 
 (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
+
 (unless (require 'el-get nil 'noerror)
   (with-current-buffer
       (url-retrieve-synchronously
        "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
     (goto-char (point-max))
     (eval-print-last-sexp)))
+
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 
-(require 'el-get-elpa)
-(unless (file-directory-p el-get-recipe-path-elpa)
-  (el-get-elpa-build-local-recipes))
-(add-to-list 'el-get-recipe-path el-get-recipe-path-elpa)
-(package-initialize)
+(el-get-bundle clang-format)
+(el-get-bundle magit)
+(el-get-bundle rust-mode)
+(el-get-bundle projectile)
+(el-get-bundle ivy)
+(el-get-bundle counsel)
+(el-get-bundle swiper)
+(el-get-bundle company)
+(el-get-bundle flycheck)
+(el-get-bundle racer)
+(el-get-bundle cargo)
+(el-get-bundle flycheck-rust)
+(el-get-bundle bazel-mode)
+(el-get-bundle cmake-mode)
+(el-get-bundle toml-mode)
+(el-get-bundle yaml-mode)
+(el-get-bundle markdown-mode)
+(el-get-bundle spinner)
+(el-get-bundle lv)
+(el-get-bundle lsp-mode)
+(el-get-bundle company-lsp)
+(el-get-bundle lsp-ui)
+(el-get-bundle dap-mode
+  :url "https://github.com/emacs-lsp/dap-mode.git")
 (el-get 'sync)
-(el-get-install "company-irony")
-(el-get-install	"bazel-mode")
-(el-get-install "cmake-mode")
-(el-get-install "flycheck")
-(el-get-install "flycheck-irony")
-(el-get-install "jinja2-mode")
-(el-get-install "yaml-mode")
+
+(package-initialize)
+
+(counsel-mode 1)
+
+(add-to-list 'load-path "~/.emacs.lib")
+
+(require 'tramp)
+(require 'generic-x)
+(require 'notifications)
+(require 'subr-x)
+(require 'smart-split)
+
+(add-to-list 'default-frame-alist '(background-color . "black"))
+(add-to-list 'default-frame-alist '(foreground-color . "grey"))
+(add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
+
+(if (file-exists-p "~/.elisp/setup-frames.el")
+    (
+     (load "~/.elisp/setup-frames.el")
+     (setup-frames)))
+
+(set-default-font "Inconsolata-10")
 
 (setq column-number-mode t)
-;(setq pending-delete-mode t nil)
 (setq line-number-mode t)
 (setq mouse-yank-at-point t)
 (setq indent-tabs-mode nil)
@@ -79,25 +81,6 @@
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.inl\\'" . c++-mode))
 
-(autoload 'perl-mode "cperl-mode" "alternate mode for editing Perl programs" t)
-
-(setq cperl-indent-level 4)
-(setq auto-mode-alist (append '(("\\.\\([pP][Llm]\\|al\\|t\\)$" . cperl-mode))  auto-mode-alist ))
-(setq interpreter-mode-alist (append interpreter-mode-alist '(("perl" . cperl-mode))))
-
-(setq auto-mode-alist (append '(("\\.xsd$" . sgml-mode)) auto-mode-alist ))
-
-(add-hook 'cperl-mode-hook
-	  '(lambda ()
-             (setq tab-width 4 indent-tabs-mode nil)
-	     )
-	  )
-(add-hook 'perl-mode-hook
-	  '(lambda ()
-             (setq tab-width 4 indent-tabs-mode nil)
-	     )
-	  )
-
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 (setq truncate-partial-width-windows nil)
 
@@ -106,18 +89,20 @@
 (global-font-lock-mode)
 (global-set-key [(control tab)] 'other-window)
 (global-set-key [(control shift tab)] 'other-frame)
-;(global-set-key [(control /)] 'mycompile)
+(global-set-key (kbd "C-s") 'swiper-isearch)
+(global-set-key [(control /)] 'counsel-compile)
+(global-set-key (kbd "C-x b") 'counsel-switch-buffer)
+(global-set-key (kbd "M-x") 'counsel-M-x)
+(global-set-key (kbd "C-x C-f") 'counsel-find-file)
+(global-set-key (kbd "M-y") 'counsel-yank-pop)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (show-paren-mode)
 (transient-mark-mode t)
 
-(eval-after-load 'company
-  (lambda ()
-    (delete 'company-clang company-backends)
-    (add-to-list 'company-backends 'company-irony)))
 
-(eval-after-load 'flycheck
-  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+
+(projectile-mode +1)
+(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 
 (defconst my-cc-style
   '("gnu"
@@ -129,33 +114,45 @@
 	  '(lambda ()
 	     (c-set-style "my-cc-style")
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
-(add-hook 'c++-mode-hook 'company-mode)
-(add-hook 'c++-mode-hook 'flycheck-mode)
+
 (add-hook 'c-mode-hook
 	  '(lambda ()
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
+
+(require 'lsp)
+(require 'lsp-clients)
+(add-hook 'c++-mode-hook #'lsp-deferred)
+(add-hook 'c-mode-hook #'lsp-deferred)
+
+
+(setq racer-cmd "~/.cargo/bin/racer") ;; Rustup binaries PATH
+(setq racer-rust-src-path "~/work/rust/src")
+(add-hook 'rust-mode-hook #'racer-mode)
+(add-hook 'racer-mode-hook #'eldoc-mode)
+(add-hook 'racer-mode-hook #'company-mode)
+(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
 
 (global-unset-key [(meta g)])
 (global-set-key [(meta g)] 'goto-line)
 
 (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
 
-(require 'clang-format)
-(global-set-key (kbd "C-c i") 'clang-format-region)
-(global-set-key (kbd "C-c u") 'clang-format-buffer)
+;(require 'clang-format)
+;(global-set-key (kbd "C-c i") 'clang-format-region)
+;(global-set-key (kbd "C-c u") 'clang-format-buffer)
 
-(setq clang-format-executable "/usr/local/bin/clang-format")
-(defun clang-format-before-save ()
-  "Add this to .emacs to clang-format on save
- (add-hook 'before-save-hook 'clang-format-before-save)."
+;(setq clang-format-executable "/usr/local/bin/clang-format")
+;(defun clang-format-before-save ()
+;  "Add this to .emacs to clang-format on save
+; (add-hook 'before-save-hook 'clang-format-before-save)."
  
  
-  (interactive)
-  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
+;  (interactive)
+;  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
  
  
 ;; Install hook to use clang-format on save
-(add-hook 'before-save-hook 'clang-format-before-save)
+;(add-hook 'before-save-hook 'clang-format-before-save)
 
 (dolist (this-frame (frame-list))
   (select-frame this-frame)
@@ -182,7 +179,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages (quote (magit bazel-mode el-get))))
+ '(package-selected-packages
+   (quote
+    (use-package slack websocket request oauth2 emojify circe alert yaml-mode jinja2-mode bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
