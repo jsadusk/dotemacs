@@ -35,6 +35,7 @@
 (el-get-bundle lsp-mode)
 (el-get-bundle company-lsp)
 (el-get-bundle lsp-ui)
+(el-get-bundle ccls)
 (el-get-bundle dap-mode
   :url "https://github.com/emacs-lsp/dap-mode.git")
 (el-get 'sync)
@@ -50,16 +51,13 @@
 (require 'notifications)
 (require 'subr-x)
 (require 'smart-split)
+(require 'receive-notifications)
+(require 'wait-gdb)
+(require 'compile-notifications)
 
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-
-(if (file-exists-p "~/.elisp/setup-frames.el")
-    (
-     (load "~/.elisp/setup-frames.el")
-     (setup-frames)))
-
 (set-default-font "Inconsolata-10")
 
 (setq column-number-mode t)
@@ -118,12 +116,11 @@
 (add-hook 'c-mode-hook
 	  '(lambda ()
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
-
+(require 'ccls)
 (require 'lsp)
 (require 'lsp-clients)
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
-
 
 (setq racer-cmd "~/.cargo/bin/racer") ;; Rustup binaries PATH
 (setq racer-rust-src-path "~/work/rust/src")
@@ -154,25 +151,20 @@
 ;; Install hook to use clang-format on save
 ;(add-hook 'before-save-hook 'clang-format-before-save)
 
+(receive-notifications)
+(compile-notifications)
+
+(if (file-exists-p "~/.emacs.local")
+    (add-to-list 'load-path "~/.emacs.local"))
+
+(if (file-exists-p "~/.emacs.local/local-init.el")
+     (load-file "~/.emacs.local/local-init.el"))
+(if (file-exists-p "~/.emacs.local/local-init.el")
+     (local-init))
+
 (dolist (this-frame (frame-list))
   (select-frame this-frame)
   (smart-split))
-
-(add-hook 'focus-in-hook '(lambda ()
-			    (setq frame-has-focus 1)))
-(add-hook 'focus-out-hook '(lambda ()
-			    (setq frame-has-focus nil)))
-
-(defun my-compilation-finish-function (buffer desc)
-  (if (string-match "^finished" desc)
-      (setq notify-msg "Compilation finished")
-    (setq notify-msg (concat "Compilation failed: " (string-trim desc)))
-    )
-  (if frame-has-focus
-      (message notify-msg)
-    (notifications-notify :title notify-msg)))
-
-(add-hook 'compilation-finish-functions 'my-compilation-finish-function)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
