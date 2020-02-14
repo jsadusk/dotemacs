@@ -4,6 +4,8 @@
 
 (setq notification-monitor-process nil)
 
+(setq display-notification-messages 1)
+
 (add-hook 'focus-in-hook '(lambda ()
 			    (setq display-notification-messages 1)))
 (add-hook 'focus-out-hook '(lambda ()

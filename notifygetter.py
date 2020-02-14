@@ -15,7 +15,7 @@ def notifications(bus, message):
 DBusGMainLoop(set_as_default=True)
 
 bus = dbus.SessionBus()
-bus.add_match_string("type='method_call',interface='org.freedesktop.Notifications',member='Notify',eavesdrop=true")
+bus.add_match_string("interface='org.freedesktop.Notifications'")
 bus.add_message_filter(notifications)
 
 mainloop = GLib.MainLoop()

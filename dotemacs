@@ -1,3 +1,5 @@
+(setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
+
 (require 'package)
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
@@ -22,7 +24,6 @@
 (el-get-bundle swiper)
 (el-get-bundle company)
 (el-get-bundle flycheck)
-(el-get-bundle racer)
 (el-get-bundle cargo)
 (el-get-bundle flycheck-rust)
 (el-get-bundle bazel-mode)
@@ -122,11 +123,9 @@
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
 
-(setq racer-cmd "~/.cargo/bin/racer") ;; Rustup binaries PATH
-(setq racer-rust-src-path "~/work/rust/src")
-(add-hook 'rust-mode-hook #'racer-mode)
-(add-hook 'racer-mode-hook #'eldoc-mode)
-(add-hook 'racer-mode-hook #'company-mode)
+(setq lsp-rust-server 'rust-analyzer)
+
+(add-hook 'rust-mode-hook #'lsp-deferred)
 (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
 
 (global-unset-key [(meta g)])
@@ -171,9 +170,8 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   (quote
-    (use-package slack websocket request oauth2 emojify circe alert yaml-mode jinja2-mode bazel-mode flycheck-irony company-irony company-irony-c-headers company magit))))
+ '(lsp-rust-server (quote rust-analyzer))
+ '(package-selected-packages (quote (ccls lv bazel-mode company counsel ivy))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
