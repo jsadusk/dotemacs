@@ -21,6 +21,7 @@
 (el-get-bundle projectile)
 (el-get-bundle ivy)
 (el-get-bundle counsel)
+(el-get-bundle counsel-projectile)
 (el-get-bundle swiper)
 (el-get-bundle company)
 (el-get-bundle flycheck)
@@ -39,6 +40,7 @@
 (el-get-bundle ccls)
 (el-get-bundle dap-mode
   :url "https://github.com/emacs-lsp/dap-mode.git")
+(el-get-bundle jinja2-mode)
 (el-get 'sync)
 
 (package-initialize)
@@ -59,7 +61,7 @@
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-(set-default-font "Inconsolata-10")
+(set-frame-font "Inconsolata-10")
 
 (setq column-number-mode t)
 (setq line-number-mode t)
@@ -77,6 +79,7 @@
 (add-to-list 'auto-mode-alist '("BUILD$" . bazel-mode))
 (add-to-list 'auto-mode-alist '("dotemacs$" . lisp-mode))
 (add-to-list 'auto-mode-alist '("\\.template$" . jinja2-mode))
+(add-to-list 'auto-mode-alist '("\\.j2$" . jinja2-mode))
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.inl\\'" . c++-mode))
 
@@ -100,7 +103,7 @@
 
 
 
-(projectile-mode +1)
+(counsel-projectile-mode)
 (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 
 (defconst my-cc-style
@@ -133,22 +136,22 @@
 
 (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
 
-;(require 'clang-format)
-;(global-set-key (kbd "C-c i") 'clang-format-region)
-;(global-set-key (kbd "C-c u") 'clang-format-buffer)
+(require 'clang-format)
+(global-set-key (kbd "C-c i") 'clang-format-region)
+(global-set-key (kbd "C-c u") 'clang-format-buffer)
 
-;(setq clang-format-executable "/usr/local/bin/clang-format")
-;(defun clang-format-before-save ()
-;  "Add this to .emacs to clang-format on save
-; (add-hook 'before-save-hook 'clang-format-before-save)."
+(setq clang-format-executable "/usr/local/bin/clang-format")
+(defun clang-format-before-save ()
+  "Add this to .emacs to clang-format on save
+ (add-hook 'before-save-hook 'clang-format-before-save)."
  
  
-;  (interactive)
-;  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
+  (interactive)
+  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
  
  
-;; Install hook to use clang-format on save
-;(add-hook 'before-save-hook 'clang-format-before-save)
+; Install hook to use clang-format on save
+(add-hook 'before-save-hook 'clang-format-before-save)
 
 (receive-notifications)
 (compile-notifications)
