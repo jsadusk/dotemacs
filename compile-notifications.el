@@ -2,6 +2,8 @@
   "Send desktop notifications when compilation fininshes and emacs doesn't have focus"
   :group 'tools)
 
+(setq frame-has-focus 1)
+
 (add-hook 'focus-in-hook '(lambda ()
 			    (setq frame-has-focus 1)))
 (add-hook 'focus-out-hook '(lambda ()
