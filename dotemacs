@@ -14,6 +14,7 @@
 
 (el-get-bundle clang-format)
 (el-get-bundle magit)
+(el-get-bundle yasnippet)
 (el-get-bundle rust-mode)
 (el-get-bundle projectile)
 (el-get-bundle ivy)
