@@ -12,15 +12,16 @@
 
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 
+(el-get-bundle avy)
+(el-get-bundle ivy)
+(el-get-bundle swiper)
 (el-get-bundle clang-format)
 (el-get-bundle magit)
 (el-get-bundle yasnippet)
 (el-get-bundle rust-mode)
 (el-get-bundle projectile)
-(el-get-bundle ivy)
 (el-get-bundle counsel)
 (el-get-bundle counsel-projectile)
-(el-get-bundle swiper)
 (el-get-bundle company)
 (el-get-bundle flycheck)
 (el-get-bundle cargo)
@@ -40,8 +41,6 @@
   :url "https://github.com/emacs-lsp/dap-mode.git")
 (el-get-bundle jinja2-mode)
 (el-get 'sync)
-
-(package-initialize)
 
 (counsel-mode 1)
 
@@ -124,10 +123,12 @@
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
 
-(setq lsp-rust-server 'rust-analyzer)
+(setq lsp-rust-server 'rls)
 
 (add-hook 'rust-mode-hook #'lsp-deferred)
 (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+
+(setq rust-format-on-save t)
 
 (global-unset-key [(meta g)])
 (global-set-key [(meta g)] 'goto-line)
@@ -172,6 +173,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(lsp-rust-server 'rust-analyzer t)
+ '(nil nil t)
  '(package-selected-packages '(ccls lv bazel-mode company counsel ivy)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
