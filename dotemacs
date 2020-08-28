@@ -34,7 +34,6 @@
 (el-get-bundle spinner)
 (el-get-bundle lv)
 (el-get-bundle lsp-mode)
-(el-get-bundle company-lsp)
 (el-get-bundle lsp-ui)
 (el-get-bundle ccls)
 (el-get-bundle dap-mode
@@ -43,6 +42,7 @@
 (el-get 'sync)
 
 (counsel-mode 1)
+(yas-global-mode 1)
 
 (add-to-list 'load-path "~/.emacs.lib")
 
@@ -58,7 +58,6 @@
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-(set-frame-font "Inconsolata-10")
 
 (setq column-number-mode t)
 (setq line-number-mode t)
@@ -72,8 +71,8 @@
 (tool-bar-mode -1)
 (setq-default display-buffer-reuse-frames t)
 
-(add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
-(add-to-list 'auto-mode-alist '("BUILD$" . bazel-mode))
+(add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-starlark-mode))
+(add-to-list 'auto-mode-alist '("BUILD$" . bazel-starlark-mode))
 (add-to-list 'auto-mode-alist '("dotemacs$" . lisp-mode))
 (add-to-list 'auto-mode-alist '("\\.template$" . jinja2-mode))
 (add-to-list 'auto-mode-alist '("\\.j2$" . jinja2-mode))
@@ -119,7 +118,6 @@
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
 (require 'ccls)
 (require 'lsp)
-(require 'lsp-clients)
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
 
@@ -172,9 +170,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer t)
- '(nil nil t)
- '(package-selected-packages '(ccls lv bazel-mode company counsel ivy)))
+ '(lsp-rust-server 'rust-analyzer t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
