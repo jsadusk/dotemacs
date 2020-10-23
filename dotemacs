@@ -12,6 +12,8 @@
 
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 
+(el-get-bundle bui)
+(el-get-bundle posframe)
 (el-get-bundle avy)
 (el-get-bundle ivy)
 (el-get-bundle swiper)
@@ -35,6 +37,7 @@
 (el-get-bundle lv)
 (el-get-bundle lsp-mode)
 (el-get-bundle lsp-ui)
+(el-get-bundle lsp-treemacs)
 (el-get-bundle ccls)
 (el-get-bundle dap-mode
   :url "https://github.com/emacs-lsp/dap-mode.git")
@@ -170,7 +173,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer t))
+ '(lsp-rust-server 'rust-analyzer)
+ '(package-selected-packages
+   '(lsp-treemacs bui lsp-mode counsel company ccls bazel-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
