@@ -1,48 +1,53 @@
+(package-initialize)
 (require 'package)
 (add-to-list 'package-archives
-             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+    '("melpa" . "http://melpa.milkbox.net/packages/") t)
+    
+(unless (package-installed-p 'quelpa)
+  (with-temp-buffer
+    (url-insert-file-contents "https://raw.githubusercontent.com/quelpa/quelpa/master/quelpa.el")
+    (eval-buffer)
+    (quelpa-self-upgrade)))
 
-(add-to-list 'load-path "~/.emacs.d/el-get/el-get")
-(unless (require 'el-get nil 'noerror)
-  (with-current-buffer
-      (url-retrieve-synchronously
-       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
-    (goto-char (point-max))
-    (eval-print-last-sexp)))
+(quelpa
+ '(quelpa-use-package
+   :fetcher git
+   :url "https://github.com/quelpa/quelpa-use-package.git"))
+(require 'quelpa-use-package)
+(setq use-package-ensure-function 'quelpa)
+(setq use-package-always-ensure t)
 
-(add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
-
-(el-get-bundle bui)
-(el-get-bundle posframe)
-(el-get-bundle avy)
-(el-get-bundle ivy)
-(el-get-bundle swiper)
-(el-get-bundle clang-format)
-(el-get-bundle magit)
-(el-get-bundle yasnippet)
-(el-get-bundle rust-mode)
-(el-get-bundle projectile)
-(el-get-bundle counsel)
-(el-get-bundle counsel-projectile)
-(el-get-bundle company)
-(el-get-bundle flycheck)
-(el-get-bundle cargo)
-(el-get-bundle flycheck-rust)
-(el-get-bundle bazel-mode)
-(el-get-bundle cmake-mode)
-(el-get-bundle toml-mode)
-(el-get-bundle yaml-mode)
-(el-get-bundle markdown-mode)
-(el-get-bundle spinner)
-(el-get-bundle lv)
-(el-get-bundle lsp-mode)
-(el-get-bundle lsp-ui)
-(el-get-bundle lsp-treemacs)
-(el-get-bundle ccls)
-(el-get-bundle dap-mode
-  :url "https://github.com/emacs-lsp/dap-mode.git")
-(el-get-bundle jinja2-mode)
-(el-get 'sync)
+(use-package bui)
+(use-package posframe)
+(use-package avy)
+(use-package ivy)
+(use-package swiper)
+(use-package clang-format)
+(use-package magit)
+(use-package yasnippet)
+(use-package rust-mode)
+(use-package projectile)
+(use-package counsel)
+(use-package counsel-projectile)
+(use-package company)
+(use-package flycheck)
+(use-package cargo)
+(use-package flycheck-rust)
+(use-package bazel-mode)
+(use-package cmake-mode)
+(use-package toml-mode)
+(use-package yaml-mode)
+(use-package markdown-mode)
+(use-package spinner
+    :quelpa (spinner :fetcher github :repo "Malabarba/spinner.el"))
+(use-package lv)
+(use-package lsp-mode)
+(use-package lsp-ui)
+(use-package lsp-treemacs)
+(use-package ccls)
+(use-package dap-mode
+  :quelpa (dap-mode :fetcher github :repo "emacs-lsp/dap-mode"))
+(use-package jinja2-mode)
 
 (counsel-mode 1)
 (yas-global-mode 1)
@@ -173,9 +178,8 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer)
- '(package-selected-packages
-   '(lsp-treemacs bui lsp-mode counsel company ccls bazel-mode)))
+ '(lsp-rust-server 'rust-analyzer t)
+ '(package-selected-packages nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
