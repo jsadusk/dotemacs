@@ -48,7 +48,8 @@
 (use-package flycheck)
 (use-package cargo)
 (use-package flycheck-rust)
-(use-package bazel-mode)
+;(use-package bazel-mode
+;    :straight (bazel-mode :type git :host github :repo "brown/bazel-mode"))
 (use-package cmake-mode)
 (use-package toml-mode)
 (use-package yaml-mode)
@@ -65,6 +66,7 @@
 (use-package dap-mode
   :straight (dap-mode :type git :host github :repo "emacs-lsp/dap-mode"))
 (use-package jinja2-mode)
+(use-package git-link)
 
 (counsel-mode 1)
 (yas-global-mode 1)
@@ -80,6 +82,7 @@
 (require 'wait-gdb)
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
+(require 'bazel)
 
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
@@ -128,6 +131,7 @@
 
 (counsel-projectile-mode)
 (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+(setq projectile-sort-order 'recentf)
 
 (defconst my-cc-style
   '("gnu"
@@ -148,10 +152,13 @@
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
 
-(setq ccls-initialization-options '(:index (:initialBlacklist ["."]
-                                            :blacklist ["build" "bazel-out"])))
-(setq lsp-enable-file-watchers nil)
-(setq lsp-log-io nil)
+;(setq ccls-initialization-options '(:index (;:initialBlacklist ["."]
+                                        ;                                            :blacklist ["build" "bazel-out"])))
+(setq ccls-initialization-options '(:index (:threads 14)))
+(with-eval-after-load 'lsp-mode
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\(bazel-out|build)\\'"))
+;(setq lsp-enable-file-watchers nil)
+(setq lsp-log-io t)
 (setq auto-revert-remote-files nil)
 
 ;(lsp-register-client
