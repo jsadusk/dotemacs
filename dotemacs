@@ -82,7 +82,7 @@
 (require 'wait-gdb)
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
-(require 'bazel)
+(require 'bazel-mode)
 
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
@@ -231,8 +231,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer t)
+ '(lsp-rust-server 'rust-analyzer)
  '(package-selected-packages nil)
+ '(safe-local-variable-values
+   '((projectile-project-compilation-cmd . "bazel build //ros/src/planning_stack/...")))
  '(warning-suppress-log-types '((comp) (comp)))
  '(warning-suppress-types '((comp))))
 (custom-set-faces
