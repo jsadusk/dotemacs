@@ -179,7 +179,7 @@
 ;(receive-notifications)
 (compile-notifications)
 
-(setq clangd-remote-command '("clangd" "-j=16" "--background-index" "--compile-commands-dir=."))
+(setq clangd-remote-command '("clangd" "-j=4" "--background-index" "--compile-commands-dir=."))
 
 (if (file-exists-p "~/.emacs.local")
     (add-to-list 'load-path "~/.emacs.local"))
