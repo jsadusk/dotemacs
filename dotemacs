@@ -51,12 +51,13 @@
 (use-package jinja2-mode)
 (use-package git-link)
 (use-package org)
+(use-package xterm-color)
 
 (require 'org)
 (define-key global-map "\C-cl" 'org-store-link)
 (define-key global-map "\C-ca" 'org-agenda)
 (setq org-log-done t)
-(setq org-agenda-files '("~/org"))
+(setq org-agenda-files '("/ssh:sadusk.com:~/org"))
 
 (counsel-mode 1)
 (yas-global-mode 1)
@@ -178,6 +179,11 @@
 
 ;(receive-notifications)
 (compile-notifications)
+(setq compilation-environment '("TERM=eterm-color"))
+(defun my/advice-compilation-filter (f proc string)
+  (funcall f proc (xterm-color-filter string)))
+(advice-add 'compilation-filter :around #'my/advice-compilation-filter)
+(setq xterm-color-use-bold-for-bright t)
 
 (setq clangd-remote-command '("clangd" "-j=4" "--background-index" "--compile-commands-dir=."))
 
@@ -204,7 +210,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer)
+ '(lsp-rust-server 'rust-analyzer t)
  '(package-selected-packages nil)
  '(warning-suppress-log-types '((comp) (comp)))
  '(warning-suppress-types '((comp))))
