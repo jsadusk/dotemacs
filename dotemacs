@@ -1,3 +1,4 @@
+; package management - use straight.el and use-package
 (package-initialize)
 (require 'package)
 (add-to-list 'package-archives
@@ -53,44 +54,48 @@
 (use-package org)
 (use-package xterm-color)
 
-(require 'org)
-(define-key global-map "\C-cl" 'org-store-link)
-(define-key global-map "\C-ca" 'org-agenda)
-(setq org-log-done t)
-(setq org-agenda-files '("/ssh:sadusk.com:~/org"))
-
-(counsel-mode 1)
-(yas-global-mode 1)
-
+; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
+; turn on major features 
+(counsel-mode 1)
+(yas-global-mode 1)
+(server-start)
+
+; require things that aren't in use package
 (require 'tramp)
 (require 'generic-x)
 (require 'notifications)
 (require 'subr-x)
 (require 'smart-split)
-;(require 'receive-notifications)
 (require 'wait-gdb)
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
 (require 'bazel-mode)
 
+; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "grey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-
 (setq column-number-mode t)
 (setq line-number-mode t)
 (setq mouse-yank-at-point t)
 (setq indent-tabs-mode nil)
 (setq-default indent-tabs-mode nil)
-(setq tab-width 4)
 (global-font-lock-mode)
 (menu-bar-mode -1)
 (toggle-scroll-bar -1)
 (tool-bar-mode -1)
 (setq-default display-buffer-reuse-frames t)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+(setq truncate-partial-width-windows nil)
+(setq c-basic-offset 4)
+(setq tab-width 4)
+(show-paren-mode)
+(transient-mark-mode t)
+(if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
 
+; file associations
 (add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
 (add-to-list 'auto-mode-alist '("BUILD$" . bazel-mode))
 (add-to-list 'auto-mode-alist '("dotemacs$" . lisp-mode))
@@ -99,13 +104,7 @@
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.inl\\'" . c++-mode))
 
-(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
-(setq truncate-partial-width-windows nil)
-
-(setq c-basic-offset 4)
-(setq projectile-completion-system 'ivy)
-(server-start)
-(global-font-lock-mode)
+; Global keybindings
 (global-set-key [(control tab)] 'other-window)
 (global-set-key [(control shift tab)] 'other-frame)
 (global-set-key (kbd "C-s") 'swiper-isearch)
@@ -116,15 +115,29 @@
 (global-set-key (kbd "C-x C-f") 'counsel-find-file)
 (global-set-key (kbd "M-y") 'counsel-yank-pop)
 (global-set-key [(control =)] 'copy-region-as-kill)
-(show-paren-mode)
-(transient-mark-mode t)
+(global-unset-key [(meta g)])
+(global-set-key [(meta g)] 'goto-line)
 
 
+; Turn off magit features that make me insane
+(with-eval-after-load 'magit-mode
+  (define-key magit-mode-map [(control tab)] 'other-window))
+(setq magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1)
 
+; projectile settings
+(setq projectile-completion-system 'ivy)
 (counsel-projectile-mode)
 (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 (setq projectile-sort-order 'recentf)
 
+; org settings
+(require 'org)
+(define-key global-map "\C-cl" 'org-store-link)
+(define-key global-map "\C-ca" 'org-agenda)
+(setq org-log-done t)
+(setq org-agenda-files '("/ssh:sadusk.com:~/org"))
+
+; C/C++ settings
 (defconst my-cc-style
   '("gnu"
     (c-offsets-alist . ((innamespace [0])
@@ -140,26 +153,7 @@
 	  '(lambda ()
 	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
 
-(require 'lsp)
-(add-hook 'c++-mode-hook #'lsp-deferred)
-(add-hook 'c-mode-hook #'lsp-deferred)
-
-;(setq lsp-enable-file-watchers nil)
-;(setq lsp-log-io t)
-(setq auto-revert-remote-files nil)
-
-(setq lsp-rust-server 'rls)
-
-(add-hook 'rust-mode-hook #'lsp-deferred)
-(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
-
-(setq rust-format-on-save t)
-
-(global-unset-key [(meta g)])
-(global-set-key [(meta g)] 'goto-line)
-
-(if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
-
+; clang format
 (require 'clang-format)
 (global-set-key (kbd "C-c i") 'clang-format-region)
 (global-set-key (kbd "C-c u") 'clang-format-buffer)
@@ -177,7 +171,33 @@
 ; Install hook to use clang-format on save
 (add-hook 'before-save-hook 'clang-format-before-save)
 
-;(receive-notifications)
+; lsp settings
+(require 'lsp)
+(add-hook 'c++-mode-hook #'lsp-deferred)
+(add-hook 'c-mode-hook #'lsp-deferred)
+(setq clangd-remote-command '("clangd" "-j=4" "--background-index" "--compile-commands-dir=."))
+
+; lsp over tramp
+(setq auto-revert-remote-files nil)
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-tramp-connection clangd-remote-command)
+                  :major-modes '(c-mode c++-mode)
+                  :remote? t
+                  :server-id 'clangd-remote))
+
+; uncomment to debug lsp
+;(setq lsp-enable-file-watchers nil)
+;(setq lsp-log-io t)
+
+; rust settings
+(setq lsp-rust-server 'rls)
+
+(add-hook 'rust-mode-hook #'lsp-deferred)
+(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+
+(setq rust-format-on-save t)
+
+; compilation-mode tweaks
 (compile-notifications)
 (setq compilation-environment '("TERM=eterm-color"))
 (defun my/advice-compilation-filter (f proc string)
@@ -185,8 +205,7 @@
 (advice-add 'compilation-filter :around #'my/advice-compilation-filter)
 (setq xterm-color-use-bold-for-bright t)
 
-(setq clangd-remote-command '("clangd" "-j=4" "--background-index" "--compile-commands-dir=."))
-
+; load local environment
 (if (file-exists-p "~/.emacs.local")
     (add-to-list 'load-path "~/.emacs.local"))
 
@@ -195,12 +214,7 @@
 (if (file-exists-p "~/.emacs.local/local-init.el")
      (local-init))
 
-(lsp-register-client
- (make-lsp-client :new-connection (lsp-tramp-connection clangd-remote-command)
-                  :major-modes '(c-mode c++-mode)
-                  :remote? t
-                  :server-id 'clangd-remote))
-
+; split all the frames
 (dolist (this-frame (frame-list))
   (select-frame this-frame)
   (smart-split))
