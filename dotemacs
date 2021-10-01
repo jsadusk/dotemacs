@@ -21,6 +21,9 @@
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
 
+; fix for some incompatibility with tramp and straight.el
+(autoload #'tramp-register-crypt-file-name-handler "tramp-crypt")
+(use-package tramp)
 (use-package bui)
 (use-package posframe)
 (use-package avy)
@@ -63,7 +66,6 @@
 (server-start)
 
 ; require things that aren't in use package
-(require 'tramp)
 (require 'generic-x)
 (require 'notifications)
 (require 'subr-x)
