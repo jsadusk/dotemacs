@@ -32,14 +32,13 @@
 (use-package clang-format)
 (use-package magit)
 (use-package yasnippet)
-(use-package rust-mode)
 (use-package projectile)
 (use-package counsel)
 (use-package counsel-projectile)
 (use-package company)
 (use-package flycheck)
 (use-package cargo)
-(use-package flycheck-rust)
+(use-package rustic-mode)
 (use-package cmake-mode)
 (use-package toml-mode)
 (use-package yaml-mode)
@@ -54,8 +53,21 @@
   :straight (dap-mode :type git :host github :repo "emacs-lsp/dap-mode"))
 (use-package jinja2-mode)
 (use-package git-link)
-(use-package org)
+(use-package org
+  :init
+  (define-key global-map "\C-cl" 'org-store-link)
+  (define-key global-map "\C-ca" 'org-agenda)
+  (setq org-log-done t)
+  (setq org-agenda-files '("/ssh:sadusk.com:~/org"))
+)
 (use-package xterm-color)
+(use-package all-the-icons-ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1))
+(use-package ivy-rich
+  :init
+  (ivy-rich-mode 1)
+  (setcdr (assq t ivy-format-functions-alist) #'ivy-format-function-line)
+)
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
@@ -96,6 +108,7 @@
 (show-paren-mode)
 (transient-mark-mode t)
 (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
+(global-so-long-mode)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
@@ -131,13 +144,6 @@
 (counsel-projectile-mode)
 (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 (setq projectile-sort-order 'recentf)
-
-; org settings
-(require 'org)
-(define-key global-map "\C-cl" 'org-store-link)
-(define-key global-map "\C-ca" 'org-agenda)
-(setq org-log-done t)
-(setq org-agenda-files '("/ssh:sadusk.com:~/org"))
 
 ; C/C++ settings
 (defconst my-cc-style
@@ -226,8 +232,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer t)
+ '(lsp-rust-server 'rust-analyzer)
  '(package-selected-packages nil)
+ '(safe-local-variable-values
+   '((projectile-project-compilation-cmd . "bazel build //ros/src/planning_stack/...")))
  '(warning-suppress-log-types '((comp) (comp)))
  '(warning-suppress-types '((comp))))
 (custom-set-faces
