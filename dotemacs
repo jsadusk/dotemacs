@@ -23,7 +23,15 @@
 
 ; fix for some incompatibility with tramp and straight.el
 (autoload #'tramp-register-crypt-file-name-handler "tramp-crypt")
+(use-package org
+  :init
+  (define-key global-map "\C-cl" 'org-store-link)
+  (define-key global-map "\C-ca" 'org-agenda)
+  (setq org-log-done t)
+  (setq org-agenda-files '("/ssh:sadusk.com:~/org"))
+)
 (use-package tramp)
+(use-package project)
 (use-package bui)
 (use-package posframe)
 (use-package avy)
@@ -52,13 +60,6 @@
   :straight (dap-mode :type git :host github :repo "emacs-lsp/dap-mode"))
 (use-package jinja2-mode)
 (use-package git-link)
-(use-package org
-  :init
-  (define-key global-map "\C-cl" 'org-store-link)
-  (define-key global-map "\C-ca" 'org-agenda)
-  (setq org-log-done t)
-  (setq org-agenda-files '("/ssh:sadusk.com:~/org"))
-)
 (use-package xterm-color)
 (use-package all-the-icons-ivy-rich
   :init (all-the-icons-ivy-rich-mode 1))
@@ -86,6 +87,7 @@
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
 (require 'bazel-mode)
+(require 'org)
 
 ; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
