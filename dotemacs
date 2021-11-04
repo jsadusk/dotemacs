@@ -21,6 +21,8 @@
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
 
+(defun native-comp-available-p () nil)
+
 ; fix for some incompatibility with tramp and straight.el
 (autoload #'tramp-register-crypt-file-name-handler "tramp-crypt")
 (use-package org
@@ -29,7 +31,14 @@
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
   (setq org-agenda-files '("/ssh:sadusk.com:~/org"))
-)
+  )
+(use-package org-roam
+  :init
+  (setq org-roam-v2-ack t)
+  (setq org-roam-directory "/ssh:sadusk.com:~/org-roam")
+  (org-roam-db-autosync-mode)
+  )
+
 (use-package tramp)
 (use-package project)
 (use-package bui)
