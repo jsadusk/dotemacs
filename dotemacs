@@ -25,6 +25,7 @@
 
 ; fix for some incompatibility with tramp and straight.el
 (autoload #'tramp-register-crypt-file-name-handler "tramp-crypt")
+(use-package tramp)
 (use-package org
   :init
   (define-key global-map "\C-cl" 'org-store-link)
@@ -39,7 +40,6 @@
   (org-roam-db-autosync-mode)
   )
 
-(use-package tramp)
 (use-package project)
 (use-package bui)
 (use-package posframe)
@@ -194,7 +194,7 @@
 (require 'lsp)
 (add-hook 'c++-mode-hook #'lsp-deferred)
 (add-hook 'c-mode-hook #'lsp-deferred)
-(setq clangd-remote-command '("clangd" "-j=4" "--background-index" "--compile-commands-dir=."))
+(setq clangd-remote-command '("clangd-12" "-j=8" "--background-index" "--compile-commands-dir=."))
 
 ; lsp over tramp
 (setq auto-revert-remote-files nil)
