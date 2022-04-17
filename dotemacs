@@ -21,24 +21,26 @@
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
 
+; hack to make emacs 29 work
 (defun native-comp-available-p () nil)
 
-; fix for some incompatibility with tramp and straight.el
-(autoload #'tramp-register-crypt-file-name-handler "tramp-crypt")
-(use-package tramp)
+; configure tramp
+(require 'tramp)
+(setq tramp-verbose 6)
+(setq tramp-use-ssh-controlmaster-options nil)
+(setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
+
 (use-package org
   :init
   (define-key global-map "\C-cl" 'org-store-link)
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
-  (setq org-agenda-files '("/ssh:sadusk.com:~/org"))
   )
-(use-package org-roam
-  :init
-  (setq org-roam-v2-ack t)
-  (setq org-roam-directory "/ssh:sadusk.com:~/org-roam")
-  (org-roam-db-autosync-mode)
-  )
+;(use-package org-roam
+;  :init
+;  (setq org-roam-v2-ack t)
+;  (org-roam-db-autosync-mode)
+;  )
 
 (use-package project)
 (use-package bui)
@@ -62,11 +64,8 @@
 (use-package markdown-mode)
 (use-package rustic)
 (use-package lv)
-(use-package lsp-mode)
-(use-package lsp-ui)
-(use-package lsp-treemacs)
-(use-package dap-mode
-  :straight (dap-mode :type git :host github :repo "emacs-lsp/dap-mode"))
+(use-package eglot)
+(use-package eldoc-box)
 (use-package jinja2-mode)
 (use-package git-link)
 (use-package xterm-color)
@@ -100,7 +99,7 @@
 
 ; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
-(add-to-list 'default-frame-alist '(foreground-color . "grey"))
+(add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
 (setq column-number-mode t)
 (setq line-number-mode t)
@@ -120,6 +119,7 @@
 (transient-mark-mode t)
 (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
 (global-so-long-mode)
+(pixel-scroll-precision-mode)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
@@ -165,12 +165,16 @@
 (c-add-style "my-cc-style" my-cc-style)
 (add-hook 'c++-mode-hook
 	  '(lambda ()
-	     (c-set-style "my-cc-style")
-	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
+	    (c-set-style "my-cc-style")
+	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
+            (eglot-ensure)
+            (eldoc-box-hover-mode)
+            (company-mode)))
 
 (add-hook 'c-mode-hook
 	  '(lambda ()
-	     (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
+	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
+            (eldoc-box-hover-mode)))
 
 ; clang format
 (require 'clang-format)
@@ -190,29 +194,18 @@
 ; Install hook to use clang-format on save
 (add-hook 'before-save-hook 'clang-format-before-save)
 
-; lsp settings
-(require 'lsp)
-(add-hook 'c++-mode-hook #'lsp-deferred)
-(add-hook 'c-mode-hook #'lsp-deferred)
-(setq clangd-remote-command '("clangd-12" "-j=8" "--background-index" "--compile-commands-dir=."))
+(defun projectile-proj-find-function (dir)
+  (let ((root (projectile-project-root dir)))
+    (and root (cons 'transient root))))
 
-; lsp over tramp
-(setq auto-revert-remote-files nil)
-(lsp-register-client
- (make-lsp-client :new-connection (lsp-tramp-connection clangd-remote-command)
-                  :major-modes '(c-mode c++-mode)
-                  :remote? t
-                  :server-id 'clangd-remote))
-
-; uncomment to debug lsp
-;(setq lsp-enable-file-watchers nil)
-;(setq lsp-log-io t)
-
-; rust settings
-(setq lsp-rust-server 'rls)
-
-(add-hook 'rust-mode-hook #'lsp-deferred)
-(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+(setq company-backends
+      (cons 'company-capf
+            (remove 'company-capf company-backends)))
+(with-eval-after-load 'project
+  (add-to-list 'project-find-functions
+               'projectile-proj-find-function))
+(add-to-list 'eglot-server-programs
+             `((c++-mode) ,"clangd"))
 
 (setq rust-format-on-save t)
 
