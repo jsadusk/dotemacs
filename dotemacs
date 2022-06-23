@@ -69,8 +69,8 @@
 (use-package jinja2-mode)
 (use-package git-link)
 (use-package xterm-color)
-(use-package all-the-icons-ivy-rich
-  :init (all-the-icons-ivy-rich-mode 1))
+;(use-package all-the-icons-ivy-rich
+;  :init (all-the-icons-ivy-rich-mode 1))
 (use-package ivy-rich
   :init
   (ivy-rich-mode 1)
@@ -122,13 +122,6 @@
 (pixel-scroll-precision-mode)
 
 ; file associations
-(add-to-list 'auto-mode-alist '("\\.bzl$" . bazel-mode))
-(add-to-list 'auto-mode-alist '("BUILD$" . bazel-mode))
-(add-to-list 'auto-mode-alist '("dotemacs$" . lisp-mode))
-(add-to-list 'auto-mode-alist '("\\.template$" . jinja2-mode))
-(add-to-list 'auto-mode-alist '("\\.j2$" . jinja2-mode))
-(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.inl\\'" . c++-mode))
 
 ; Global keybindings
 (global-set-key [(control tab)] 'other-window)
@@ -140,6 +133,7 @@
 (global-set-key (kbd "M-x") 'counsel-M-x)
 (global-set-key (kbd "C-x C-f") 'counsel-find-file)
 (global-set-key (kbd "M-y") 'counsel-yank-pop)
+(global-set-key (kbd "C-.") 'eglot-code-actions)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (global-unset-key [(meta g)])
 (global-set-key [(meta g)] 'goto-line)
@@ -163,18 +157,23 @@
 			(inextern-lang .[0])
 			(arglist-intro . [6])))))
 (c-add-style "my-cc-style" my-cc-style)
-(add-hook 'c++-mode-hook
-	  '(lambda ()
-	    (c-set-style "my-cc-style")
-	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
-            (eglot-ensure)
-            (eldoc-box-hover-mode)
-            (company-mode)))
+;(add-hook 'c++-mode-hook
+;	  '(lambda ()
+;	    (c-set-style "my-cc-style")
+;	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
+            ;(eglot-ensure)
+            ;(eldoc-box-hover-mode)
+             ;                           (company-mode)
+;            ))
 
 (add-hook 'c-mode-hook
 	  '(lambda ()
 	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
             (eldoc-box-hover-mode)))
+
+(add-hook 'c++-mode-hook
+          '(lambda ()
+            (ivy-rich-project-root-cache-mode)))
 
 ; clang format
 (require 'clang-format)
@@ -192,11 +191,11 @@
  
  
 ; Install hook to use clang-format on save
-(add-hook 'before-save-hook 'clang-format-before-save)
+;(add-hook 'before-save-hook 'clang-format-before-save)
 
-(defun projectile-proj-find-function (dir)
-  (let ((root (projectile-project-root dir)))
-    (and root (cons 'transient root))))
+;(defun projectile-proj-find-function (dir)
+;  (let ((root (projectile-project-root dir)))
+;    (and root (cons 'transient root))))
 
 (setq company-backends
       (cons 'company-capf
@@ -211,11 +210,11 @@
 
 ; compilation-mode tweaks
 (compile-notifications)
-(setq compilation-environment '("TERM=eterm-color"))
-(defun my/advice-compilation-filter (f proc string)
-  (funcall f proc (xterm-color-filter string)))
-(advice-add 'compilation-filter :around #'my/advice-compilation-filter)
-(setq xterm-color-use-bold-for-bright t)
+;(setq compilation-environment '("TERM=eterm-color"))
+;(defun my/advice-compilation-filter (f proc string)
+;  (funcall f proc (xterm-color-filter string)))
+;(advice-add 'compilation-filter :around #'my/advice-compilation-filter)
+;(setq xterm-color-use-bold-for-bright t)
 
 ; load local environment
 (if (file-exists-p "~/.emacs.local")
