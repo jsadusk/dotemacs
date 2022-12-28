@@ -26,9 +26,11 @@
 
 ; configure tramp
 (require 'tramp)
-(setq tramp-verbose 6)
-(setq tramp-use-ssh-controlmaster-options nil)
+;(setq tramp-verbose 6)
+(setq tramp-use-ssh-controlmaster-options t)
 (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
+;(setq vc-handled-backends '(Git))
+(setq remote-file-name-inhibit-locks t)
 
 (use-package org
   :init
@@ -45,18 +47,61 @@
 (use-package project)
 (use-package bui)
 (use-package posframe)
-(use-package avy)
-(use-package ivy)
-(use-package swiper)
+(use-package vertico
+     :init
+     (vertico-mode))
+
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles partial-completion)))))
+
+(use-package consult
+    :bind
+  (
+   ("C-s" . consult-line)
+   ("C-x b" . consult-buffer)
+   ("M-g" . consult-goto-line)
+   ("M-y" . consult-yank-from-kill-ring)
+   ))
+
+(use-package marginalia
+  :bind (("M-A" . marginalia-cycle)
+         :map minibuffer-local-map
+         ("M-A" . marginalia-cycle))
+
+  :init
+  (marginalia-mode))
+(use-package all-the-icons-completion
+  :init
+  (all-the-icons-completion-mode)
+  (add-hook 'marginalia-mode-hook #'all-the-icons-completion-marginalia-setup))
+
+(use-package savehist
+  :init
+  (savehist-mode))
+
 (use-package clang-format)
 (use-package magit)
 (use-package yasnippet)
 (use-package projectile)
-(use-package counsel)
-(use-package counsel-projectile)
-(use-package company)
-(use-package flycheck)
-(use-package flycheck-rust)
+(use-package corfu
+
+  :custom
+  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  (corfu-auto t)                 ;; Enable auto completion
+  (corfu-separator ?\s)          ;; Orderless field separator
+  (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
+  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  ;;(corfu-preview-current nil)    ;; Disable current candidate preview
+  (corfu-preselect 'prompt)      ;; Preselect the prompt
+  (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+  (corfu-scroll-margin 5)        ;; Use scroll margin
+
+  :init
+  (global-corfu-mode)
+  )
 (use-package cargo)
 (use-package cmake-mode)
 (use-package toml-mode)
@@ -69,20 +114,24 @@
 (use-package jinja2-mode)
 (use-package git-link)
 (use-package xterm-color)
-;(use-package all-the-icons-ivy-rich
-;  :init (all-the-icons-ivy-rich-mode 1))
-(use-package ivy-rich
-  :init
-  (ivy-rich-mode 1)
-  (setcdr (assq t ivy-format-functions-alist) #'ivy-format-function-line)
-  )
+(use-package vterm)
+(use-package multi-vterm)
 (use-package scad-mode)
+(use-package forge :after magit)
+(use-package github-review :after forge)
+(use-package tree-sitter)
+(use-package tree-sitter-langs
+  :after tree-sitter
+  :init
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+  )
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
 ; turn on major features 
-(counsel-mode 1)
+;(counsel-mode 1)
 (yas-global-mode 1)
 (server-start)
 
@@ -126,13 +175,14 @@
 ; Global keybindings
 (global-set-key [(control tab)] 'other-window)
 (global-set-key [(control shift tab)] 'other-frame)
-(global-set-key (kbd "C-s") 'swiper-isearch)
+;(global-set-key (kbd "C-s") 'swiper-isearch)
 (global-set-key (kbd "M-s") 'isearch-repeat-forward)
 (global-set-key [(control /)] 'projectile-compile-project)
-(global-set-key (kbd "C-x b") 'counsel-switch-buffer)
-(global-set-key (kbd "M-x") 'counsel-M-x)
-(global-set-key (kbd "C-x C-f") 'counsel-find-file)
-(global-set-key (kbd "M-y") 'counsel-yank-pop)
+(global-set-key (kbd "C-c p") 'projectile-command-map)
+;(global-set-key (kbd "C-x b") 'counsel-switch-buffer)
+;(global-set-key (kbd "M-x") 'counsel-M-x)
+;(global-set-key (kbd "C-x C-f") 'counsel-find-file)
+;(global-set-key (kbd "M-y") 'counsel-yank-pop)
 (global-set-key (kbd "C-.") 'eglot-code-actions)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (global-unset-key [(meta g)])
@@ -145,9 +195,8 @@
 (setq magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1)
 
 ; projectile settings
-(setq projectile-completion-system 'ivy)
-(counsel-projectile-mode)
-(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+                                        ;(setq projectile-completion-system 'ivy)
+;(counsel-projectile-mode)
 (setq projectile-sort-order 'recentf)
 
 ; C/C++ settings
@@ -171,9 +220,9 @@
 	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
             (eldoc-box-hover-mode)))
 
-(add-hook 'c++-mode-hook
-          '(lambda ()
-            (ivy-rich-project-root-cache-mode)))
+;(add-hook 'c++-mode-hook
+;          '(lambda ()
+;            (ivy-rich-project-root-cache-mode)))
 
 ; clang format
 (require 'clang-format)
@@ -197,9 +246,9 @@
 ;  (let ((root (projectile-project-root dir)))
 ;    (and root (cons 'transient root))))
 
-(setq company-backends
-      (cons 'company-capf
-            (remove 'company-capf company-backends)))
+;(setq company-backends
+;      (cons 'company-capf
+;            (remove 'company-capf company-backends)))
 (with-eval-after-load 'project
   (add-to-list 'project-find-functions
                'projectile-proj-find-function))
@@ -239,6 +288,7 @@
  '(package-selected-packages nil)
  '(safe-local-variable-values
    '((projectile-project-compilation-cmd . "bazel build //ros/src/planning_stack/...")))
+ '(visible-bell t)
  '(warning-suppress-log-types '((comp) (comp)))
  '(warning-suppress-types '((comp))))
 (custom-set-faces
