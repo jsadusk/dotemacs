@@ -1,4 +1,7 @@
 ; package management - use straight.el and use-package
+(setq gc-cons-threshold 100000000)
+(add-hook 'after-init-hook (lambda () (setq gc-cons-threshold (* 100 1024 1024))))
+
 (package-initialize)
 (require 'package)
 (add-to-list 'package-archives
@@ -93,7 +96,7 @@
   (corfu-auto t)                 ;; Enable auto completion
   (corfu-separator ?\s)          ;; Orderless field separator
   (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
-  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  (corfu-quit-no-match t)      ;; Quit if there's no match
   ;;(corfu-preview-current nil)    ;; Disable current candidate preview
   (corfu-preselect 'prompt)      ;; Preselect the prompt
   (corfu-on-exact-match nil)     ;; Configure handling of exact matches
@@ -126,6 +129,7 @@
   (global-tree-sitter-mode)
   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
   )
+(use-package realgud)
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
