@@ -41,11 +41,11 @@
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
   )
-;(use-package org-roam
-;  :init
-;  (setq org-roam-v2-ack t)
-;  (org-roam-db-autosync-mode)
-;  )
+(use-package org-roam
+  :init
+  (setq org-roam-v2-ack t)
+  (org-roam-db-autosync-mode)
+  )
 
 (use-package project)
 (use-package bui)
@@ -246,9 +246,9 @@
 ; Install hook to use clang-format on save
 ;(add-hook 'before-save-hook 'clang-format-before-save)
 
-;(defun projectile-proj-find-function (dir)
-;  (let ((root (projectile-project-root dir)))
-;    (and root (cons 'transient root))))
+(defun projectile-proj-find-function (dir)
+  (let ((root (projectile-project-root dir)))
+    (and root (cons 'transient root))))
 
 ;(setq company-backends
 ;      (cons 'company-capf
@@ -257,9 +257,11 @@
   (add-to-list 'project-find-functions
                'projectile-proj-find-function))
 (add-to-list 'eglot-server-programs
-             `((c++-mode) ,"clangd"))
+             `((c++-mode) ,"clangd")
+             `((rustic-mode), "rust-analyzer"))
 
 (setq rust-format-on-save t)
+(setq rustic-lsp-client 'eglot)
 
 ; compilation-mode tweaks
 (compile-notifications)
@@ -288,7 +290,6 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-rust-server 'rust-analyzer)
  '(package-selected-packages nil)
  '(safe-local-variable-values
    '((projectile-project-compilation-cmd . "bazel build //ros/src/planning_stack/...")))
