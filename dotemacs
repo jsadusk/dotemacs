@@ -133,6 +133,23 @@
   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
   )
 (use-package realgud)
+(electric-pair-mode 1)
+(use-package deadgrep)
+(use-package rg)
+(use-package expand-region
+  :bind ("C-M-SPC" . er/expand-region))
+
+(use-package gdb-mi
+  :straight (:host github :repo "weirdNox/emacs-gdb" :files ("*.el" "*.c" "*.h" "Makefile"))
+  :init
+  (fmakunbound 'gdb)
+  (fmakunbound 'gdb-enable-debug))
+
+; rainbow delimiters is incompatible with tree-sitter for now
+;(use-package rainbow-delimiters
+;  :init
+;  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode)
+;)
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
