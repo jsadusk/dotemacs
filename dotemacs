@@ -1,6 +1,12 @@
+;-*- lisp -*-
 ; package management - use straight.el and use-package
-(setq gc-cons-threshold 100000000)
+(setq gc-cons-threshold (* 1000 1024 1024))
 (add-hook 'after-init-hook (lambda () (setq gc-cons-threshold (* 100 1024 1024))))
+
+(dolist (newpath '("~/.local/bin" "~/.cargo/bin/rust-analyzer" "~/bin"))
+  (setenv "PATH" (concat (getenv "PATH") ":" newpath))
+  (setq exec-path (append exec-path '(newpath)))
+  )
 
 (package-initialize)
 (require 'package)
@@ -24,6 +30,8 @@
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
 
+(setenv "PYTHONPATH" (shell-command-to-string "python3 -c 'import sys; print(\".\" + \":\".join(sys.path))'"))
+
 ; hack to make emacs 29 work
 (defun native-comp-available-p () nil)
 
@@ -43,11 +51,39 @@
   )
 (use-package org-roam
   :init
-  (if (not (file-exists-p "~/org-roam"))
-      (make-directory "~/org-roam"))
-  (setq org-roam-directory (file-truename "~/org-roam"))
-  (setq org-roam-v2-ack t)
+  (if (not (file-exists-p "~/roam"))
+      (progn 
+        (make-directory "~/roam")
+        (make-directory "~/roam/journals")
+        (make-directory "~/roam/pages")
+        )
+      )
   (org-roam-db-autosync-mode)
+  (setq org-roam-v2-ack t)
+  :custom
+  (org-roam-directory (file-truename "~/roam"))
+  (org-roam-dailies-directory "journals/")
+  (org-roam-completion-everywhere t)
+  (org-roam-capture-templates
+   '(
+     ("d" "default" plain "%?"
+      :target (file+head "pages/${slug}.org"
+                     "#+title: ${title}\n")
+      :unnarrowed t)
+     ("j" "job opportunity" plain
+      "\n* Company\n\n-%?\n\n* History\n\n-\n\n* Job Notes\n\n-\n\n* Office\n\n-\n\n* Comp\n\n-\n\n* Next Steps\n\n-\n"
+      :target (file+head "pages/job-${slug}.org"
+               "#+title: ${title}\n")
+      :unnarrowed t)
+     ))
+  :bind
+  (("C-c n l" . org-roam-buffer-toggle)
+   ("C-c n f" . org-roam-node-find)
+   ("C-c n i" . org-roam-node-insert)
+   :map org-mode-map
+   ("C-M-i" . completion-at-point))
+  :config
+  (org-roam-setup)
   )
 
 (use-package project)
@@ -105,7 +141,7 @@
   (corfu-on-exact-match nil)     ;; Configure handling of exact matches
   (corfu-scroll-margin 5)        ;; Use scroll margin
 
-  :init
+  :config
   (global-corfu-mode)
   )
 (use-package cargo)
@@ -115,7 +151,25 @@
 (use-package markdown-mode)
 (use-package rustic)
 (use-package lv)
-(use-package eglot)
+
+(use-package eglot
+    :bind
+  (("C-." . eglot-code-actions))
+
+  :config
+  (add-to-list 'eglot-server-programs
+               `((c++-mode) ,"clangd"))
+  (add-to-list 'eglot-server-programs
+               `((rustic-mode) ,"rust-analyzer"))
+  (add-to-list 'eglot-server-programs
+               '(python-mode . ("jedi-language-server")))
+  ;; (add-to-list 'eglot-server-programs
+  ;;              '(python-mode . ("pyright-langserver" "--stdio")))
+  (add-hook 'python-mode-hook 'eglot-ensure)
+  (add-hook 'c++-mode-hook 'eglot-ensure)
+  (add-hook 'rustic-mode-hook 'eglot-ensure)
+  )
+
 (use-package eldoc-box)
 (use-package jinja2-mode)
 (use-package git-link)
@@ -168,11 +222,13 @@
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
 (require 'bazel-mode)
+(load-file "~/.emacs.lib/org-roam-logseq.el")
 
 ; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
 (add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
 (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
+(add-to-list 'default-frame-alist '(font . "Inconsolata-10"))
 (setq column-number-mode t)
 (setq line-number-mode t)
 (setq mouse-yank-at-point t)
@@ -194,6 +250,7 @@
 (pixel-scroll-precision-mode)
 
 ; file associations
+(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
 ; Global keybindings
 (global-set-key [(control tab)] 'other-window)
@@ -206,7 +263,6 @@
 ;(global-set-key (kbd "M-x") 'counsel-M-x)
 ;(global-set-key (kbd "C-x C-f") 'counsel-find-file)
 ;(global-set-key (kbd "M-y") 'counsel-yank-pop)
-(global-set-key (kbd "C-.") 'eglot-code-actions)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (global-unset-key [(meta g)])
 (global-set-key [(meta g)] 'goto-line)
@@ -229,23 +285,21 @@
 			(inextern-lang .[0])
 			(arglist-intro . [6])))))
 (c-add-style "my-cc-style" my-cc-style)
-;(add-hook 'c++-mode-hook
-;	  '(lambda ()
-;	    (c-set-style "my-cc-style")
-;	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
-            ;(eglot-ensure)
-            ;(eldoc-box-hover-mode)
-             ;                           (company-mode)
-;            ))
+(add-hook 'c++-mode-hook
+	  '(lambda ()
+	    (c-set-style "my-cc-style")
+	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
+            ))
 
 (add-hook 'c-mode-hook
 	  '(lambda ()
 	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
             (eldoc-box-hover-mode)))
 
-;(add-hook 'c++-mode-hook
-;          '(lambda ()
-;            (ivy-rich-project-root-cache-mode)))
+(add-hook 'python-mode-hook
+          '(lambda()
+            (setq python-indent-offset 4)
+            (eldoc-box-hover-mode)))
 
 ; clang format
 (require 'clang-format)
@@ -275,9 +329,6 @@
 (with-eval-after-load 'project
   (add-to-list 'project-find-functions
                'projectile-proj-find-function))
-(add-to-list 'eglot-server-programs
-             `((c++-mode) ,"clangd")
-             `((rustic-mode), "rust-analyzer"))
 
 (setq rust-format-on-save t)
 (setq rustic-lsp-client 'eglot)
