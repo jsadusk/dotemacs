@@ -33,15 +33,20 @@
 (setenv "PYTHONPATH" (shell-command-to-string "python3 -c 'import sys; print(\".\" + \":\".join(sys.path))'"))
 
 ; hack to make emacs 29 work
-(defun native-comp-available-p () nil)
+;(defun native-comp-available-p () nil)
 
 ; configure tramp
 (require 'tramp)
-;(setq tramp-verbose 6)
-(setq tramp-use-ssh-controlmaster-options t)
+                                        ;(setq tramp-verbose 6)
+(setq tramp-verbose 0)
+(setq tramp-use-ssh-controlmaster-options nil)
 (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
-;(setq vc-handled-backends '(Git))
+(add-to-list 'backup-directory-alist
+             (cons tramp-file-name-regexp nil))
+;(setq vc-handled-backends '())
+;(setq vc-ignore-dir-regexp ".+")
 (setq remote-file-name-inhibit-locks t)
+
 
 (use-package org
   :init
@@ -153,22 +158,24 @@
 (use-package lv)
 
 (use-package eglot
-    :bind
-  (("C-." . eglot-code-actions))
+   :bind
+ (("C-." . eglot-code-actions))
 
-  :config
-  (add-to-list 'eglot-server-programs
-               `((c++-mode) ,"clangd"))
+ :ensure t
+ :config
+ (add-to-list 'eglot-server-programs
+              `((c++-mode) ,"clangd"))
   (add-to-list 'eglot-server-programs
                `((rustic-mode) ,"rust-analyzer"))
+  ;(add-to-list 'eglot-server-programs
+  ;'(python-mode . ("jedi-language-server")))
   (add-to-list 'eglot-server-programs
-               '(python-mode . ("jedi-language-server")))
-  ;; (add-to-list 'eglot-server-programs
-  ;;              '(python-mode . ("pyright-langserver" "--stdio")))
+               '(python-mode . ("pyright-langserver" "--stdio")))
   (add-hook 'python-mode-hook 'eglot-ensure)
   (add-hook 'c++-mode-hook 'eglot-ensure)
   (add-hook 'rustic-mode-hook 'eglot-ensure)
-  )
+)
+
 
 (use-package eldoc-box)
 (use-package jinja2-mode)
@@ -192,12 +199,139 @@
 (use-package rg)
 (use-package expand-region
   :bind ("C-M-SPC" . er/expand-region))
-
-(use-package gdb-mi
-  :straight (:host github :repo "weirdNox/emacs-gdb" :files ("*.el" "*.c" "*.h" "Makefile"))
+(use-package protobuf-mode)
+(use-package jsonrpc)
+(setq lsp-log-io t)
+(use-package lsp-mode
+  :custom
+  (lsp-completion-provider :none) ;; we use Corfu!
   :init
-  (fmakunbound 'gdb)
-  (fmakunbound 'gdb-enable-debug))
+  (defun my/lsp-mode-setup-completion ()
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+          '(orderless))) ;; Configure orderless
+  (setq lsp-enable-xref t)
+  :hook
+  (lsp-completion-mode . my/lsp-mode-setup-completion))
+(use-package dap-mode
+   :init
+ (setq dap-python-debugger 'debugpy)
+ (add-to-list 'tramp-remote-path "/home/jsadusk/.local/bin")
+)
+(use-package lsp-pyright
+  :ensure t
+  :hook (python-mode . (lambda ()
+                          (require 'lsp-pyright)
+                         (lsp)))
+  )
+
+(defun json-rpc-pid (process)
+  (error "This shouldn't exist")
+  (if process
+      (process-id process)
+      nil)
+  )
+
+(defun lsp-ssh-stdio-connection (command)
+  "Returns a connection property list using COMMAND.
+COMMAND can be: A string, denoting the command to launch the
+language server. A list of strings, denoting an executable with
+its command line arguments. A function, that either returns a
+string or a list of strings. In all cases, the launched language
+server should send and receive messages on standard I/O.
+TEST-COMMAND is a function with no arguments which returns
+whether the command is present or not. When not specified
+`lsp-mode' will check whether the first element of the list
+returned by COMMAND is available via `executable-find'"
+  (message "in my connection")
+  (cl-check-type command (or string
+                             function
+                             (and list
+                                  (satisfies (lambda (l)
+                                               (seq-every-p (lambda (el)
+                                                              (stringp el))
+                                                            l))))))
+  (list :connect (lambda (filter sentinel name environment-fn workspace)
+                   (message "in lambda")
+                   (if (functionp 'json-rpc-connection)
+                       (lsp-json-rpc-connection
+                        workspace
+                        (lsp-resolve-final-function command))
+                       (save-match-data
+                         (if (string-match "/\\(ssh|scp\\):\\([^:]*\\):.*" (lsp--default-directory-for-connection))
+                             (let ((remote-host (match-string 2 (lsp--default-directory-for-connection)))
+                                   (remote-directory (file-local-name (lsp--default-directory-for-connection)))
+
+                           (process-name (generate-new-buffer-name name))
+                           (process-environment
+                            (lsp--compute-process-environment environment-fn))
+
+                                   )
+                               (message (concat "h " remote-host " d " remote-directory))
+                               (message (concat "ssh " remote-host " '/bin/sh -c \" cd " remote-directory " ; " (lsp-resolve-final-function command)))
+                       (let* ((stderr-buf (format "*%s::stderr*" process-name))
+                              (resolved-command (lsp-resolve-final-function command))
+                              (final-command (concat "ssh " remote-host " '/bin/sh -c \" cd " remote-directory " ; " resolved-command)
+                                (default-directory (getenv "HOME"))
+)
+                              
+                              (proc (make-process
+                                     :name process-name
+                                     :connection-type 'pipe
+                                     :buffer (format "*%s*" process-name)
+                                     :coding 'no-conversion
+                                     :command final-command
+                                     :filter filter
+                                     :sentinel sentinel
+                                     :stderr stderr-buf
+                                     :noquery t)))
+                         (set-process-query-on-exit-flag proc nil)
+                         (set-process-query-on-exit-flag (get-buffer-process stderr-buf) nil)
+                         (with-current-buffer (get-buffer stderr-buf)
+                           ;; Make the *NAME::stderr* buffer buffer-read-only, q to bury, etc.
+                           (special-mode))
+                         (cons proc proc)))))))
+        :test? (lambda () (message "in test") t)))
+
+(lsp-register-client
+ (make-lsp-client
+  :new-connection
+  (lsp-ssh-stdio-connection (lambda ()
+                          (cons (executable-find "pyright-langserver" t)
+                                lsp-pyright-langserver-command-args)))
+  :major-modes '(python-mode python-ts-mode)
+  :server-id 'pyright-remote2
+  :multi-root lsp-pyright-multi-root
+  :remote? t
+  :priority 1
+  :initialized-fn (lambda (workspace)
+                    (with-lsp-workspace workspace
+                      ;; we send empty settings initially, LSP server will ask for the
+                      ;; configuration of each workspace folder later separately
+                      (lsp--set-configuration
+                       (make-hash-table :test 'equal))))
+  :notification-handlers (lsp-ht ("pyright/beginProgress" 'lsp-pyright--begin-progress-callback)
+                                 ("pyright/reportProgress" 'lsp-pyright--report-progress-callback)
+                                 ("pyright/endProgress" 'lsp-pyright--end-progress-callback))))
+(add-to-list 'lsp-disabled-clients 'pyright-remote)
+(lsp-register-client
+ (make-lsp-client
+  :new-connection
+  (lsp-ssh-stdio-connection '("/home/jsadusk/.local/bin/pyright-langserver" "--stdio"))
+  :major-modes '(python-mode python-ts-mode)
+  :server-id 'pyright-remote-pf
+  :multi-root lsp-pyright-multi-root
+  :remote? t
+  :priority 0
+  :initialized-fn (lambda (workspace)
+                    (with-lsp-workspace workspace
+                      ;; we send empty settings initially, LSP server will ask for the
+                      ;; configuration of each workspace folder later separately
+                      (lsp--set-configuration
+                       (make-hash-table :test 'equal))))
+  :notification-handlers (lsp-ht ("pyright/beginProgress" 'lsp-pyright--begin-progress-callback)
+                                 ("pyright/reportProgress" 'lsp-pyright--report-progress-callback)
+                                 ("pyright/endProgress" 'lsp-pyright--end-progress-callback))))
+
 
 ; rainbow delimiters is incompatible with tree-sitter for now
 ;(use-package rainbow-delimiters
@@ -223,6 +357,7 @@
 (require 'ansi-color-buffer)
 (require 'bazel-mode)
 (load-file "~/.emacs.lib/org-roam-logseq.el")
+(projectile-global-mode)
 
 ; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
@@ -248,13 +383,22 @@
 (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
 (global-so-long-mode)
 (pixel-scroll-precision-mode)
+(when (eq system-type 'darwin)
+  (setq visible-bell nil)
+  (setq ring-bell-function 'ignore)
+  (setq mac-option-key-is-meta nil)
+  (setq mac-command-key-is-meta t)
+  (setq mac-command-modifier 'meta)
+  (setq mac-option-modifier 'super)
+  (add-to-list 'default-frame-alist '(font . "Inconsolata-13"))
+)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
 ; Global keybindings
 (global-set-key [(control tab)] 'other-window)
-(global-set-key [(control shift tab)] 'other-frame)
+(global-set-key [(control meta tab)] 'other-frame)
 ;(global-set-key (kbd "C-s") 'swiper-isearch)
 (global-set-key (kbd "M-s") 'isearch-repeat-forward)
 (global-set-key [(control /)] 'projectile-compile-project)

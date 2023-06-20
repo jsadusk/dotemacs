@@ -2,21 +2,23 @@
   "Send desktop notifications when compilation fininshes and emacs doesn't have focus"
   :group 'tools)
 
-(setq frame-has-focus 1)
-
-(add-hook 'focus-in-hook '(lambda ()
-			    (setq frame-has-focus 1)))
-(add-hook 'focus-out-hook '(lambda ()
-			    (setq frame-has-focus nil)))
+(defun xp-notify (title message)
+  (if (eq system-type 'darwin)
+      (do-applescript (concat "display notification \"" message "\" with title \"" title "\""))
+    (notifications-notify :title title :body message))
+  )
 
 (defun my-compilation-finish-function (buffer desc)
-  (if (string-match "^finished" desc)
-      (setq notify-msg "Compilation finished")
-    (setq notify-msg (concat "Compilation failed: " (string-trim desc)))
+  (let ((compile-frame (window-frame (get-buffer-window buffer))))
+                                        ;(if (not (frame-focus-state compile-frame))
+    
+        (if (string-match "^finished" desc)
+            (xp-notify "Compilation finished" "")
+          (xp-notify "Compilation failed" (string-trim desc))
+          )
+      ;)
     )
-  (if frame-has-focus
-      (message notify-msg)
-    (notifications-notify :title notify-msg)))
+  )
 
 (defun compile-notifications ()
   "Send desktop notifications when compilation fininshes and emacs doesn't have focus"
