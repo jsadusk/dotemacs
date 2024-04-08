@@ -1,7 +1,5 @@
 ;-*- lisp -*-
 ; package management - use straight.el and use-package
-(setq gc-cons-threshold (* 1000 1024 1024))
-(add-hook 'after-init-hook (lambda () (setq gc-cons-threshold (* 100 1024 1024))))
 
 (dolist (newpath '("~/.local/bin" "~/.cargo/bin/rust-analyzer" "~/bin"))
   (setenv "PATH" (concat (getenv "PATH") ":" newpath))
@@ -29,15 +27,18 @@
 (straight-use-package 'use-package)
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
+(use-package gcmh
+    :config
+  (gcmh-mode 1))
 
-;(setenv "PYTHONPATH" (shell-command-to-string "python3 -c 'import sys; print(\".\" + \":\".join(sys.path))'"))
-
-; hack to make emacs 29 work
-;(defun native-comp-available-p () nil)
+; require things that aren't in use package
+(require 'generic-x)
+(require 'notifications)
+(require 'subr-x)
 
 ; configure tramp
 (require 'tramp)
-                                        ;(setq tramp-verbose 6)
+;(setq tramp-verbose 6)
 (setq tramp-verbose 0)
 (setq tramp-use-ssh-controlmaster-options nil)
 (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
@@ -50,12 +51,34 @@
 
 (require 'compile)
 
+(setq custom-file (concat user-emacs-directory "custom.el"))
+
+;(require 'treesit)
+;(setq treesit-font-lock-level 4)
+;(use-package treesit-auto
+;  :config
+;  (global-treesit-auto-mode))
+;; (setq major-mode-remap-alist
+;;  '((yaml-mode . yaml-ts-mode)
+;;    (bash-mode . bash-ts-mode)
+;;    (js2-mode . js-ts-mode)
+;;    (typescript-mode . typescript-ts-mode)
+;;    (json-mode . json-ts-mode)
+;;    (css-mode . css-ts-mode)
+;;    (python-mode . python-ts-mode)
+;;    (c++-mode . c++-ts-mode)
+;;    (c-mode . c-ts-mode)
+;;    (cmake-mode . cmake-ts-mode)
+;;    (rust-mode . rust-ts-mode)
+;;    (dockerfile-mode . dockerfile-ts-mode)))
+
 (use-package org
   :init
   (define-key global-map "\C-cl" 'org-store-link)
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
   )
+(use-package dockerfile-mode)
 (use-package org-roam
   :init
   (if (not (file-exists-p "~/roam"))
@@ -131,6 +154,10 @@
   :init
   (savehist-mode))
 
+(use-package flycheck
+    :init
+  (global-flycheck-mode)
+  )
 (use-package clang-format)
 (use-package magit)
 (use-package yasnippet)
@@ -156,9 +183,8 @@
 (use-package toml-mode)
 (use-package yaml-mode)
 (use-package markdown-mode)
-(use-package rustic)
+(use-package rust-mode)
 (use-package lv)
-
 ;; (use-package eglot
 ;;    :bind
 ;;  (("C-." . eglot-code-actions))
@@ -178,37 +204,52 @@
 ;;   (add-hook 'rustic-mode-hook 'eglot-ensure)
 ;; )
 
-
 (use-package eldoc-box)
 (use-package jinja2-mode)
 (use-package git-link)
-(use-package xterm-color)
+(use-package xterm-color
+    :config
+  (setq compilation-environment '("TERM=xterm-256color"))
+  (defun my/advice-compilation-filter (f proc string)
+    (if (not (string-prefix-p "/usr/bin/rg" (nth 2 (process-command proc))))
+        (funcall f proc (xterm-color-filter string))
+        (funcall f proc string)
+	)
+    )
+  (advice-add 'compilation-filter :around #'my/advice-compilation-filter)
+  )
 (use-package eterm-256color)
 (use-package vterm
     :after eterm-256color
     :custom
     (vterm-term-environment-variable "eterm-color")
+    (add-to-list 'vterm-eval-cmds '("xp-notify" xp-notify))
+    (vterm-max-scrollback 100000)
     )
 (use-package multi-vterm)
 (use-package scad-mode)
 (use-package forge :after magit)
 (use-package github-review :after forge)
-(use-package tree-sitter)
-(use-package tree-sitter-langs
-  :after tree-sitter
-  :init
-  (global-tree-sitter-mode)
-  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
-  )
-(use-package realgud)
-(electric-pair-mode 1)
+;(use-package tree-sitter)
+;(use-package tree-sitter-langs
+;  :after tree-sitter
+;  :init
+;  (global-tree-sitter-mode)
+;  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+;  )
+;(electric-pair-mode 1)
 (use-package deadgrep)
-(use-package rg)
+(use-package rg
+    ;:custom
+    ;(rg-command-line-flags '("--color never"))
+    )
 (use-package expand-region
   :bind ("C-M-SPC" . er/expand-region))
 (use-package protobuf-mode)
 (use-package jsonrpc)
-(setq lsp-log-io t)
+(fset #'jsonrpc--log-event #'ignore)
+(setq lsp-log-io nil)
+;(lsp-toggle-trace-io)
 (use-package lsp-mode
   :custom
   (lsp-completion-provider :none) ;; we use Corfu!
@@ -222,16 +263,16 @@
   (setq lsp-enable-xref t)
   :hook
   (lsp-completion-mode . my/lsp-mode-setup-completion))
-;; (use-package lsp-pyright
-;;   :ensure t
-;;   :hook (python-mode . (lambda ()
-;;                           (require 'lsp-pyright)
-;;                          (lsp)))
-;;   )
+;(use-package lsp-pyright
+;    :ensure t
+;    :hook (python-mode . (lambda ()
+;                           (require 'lsp-pyright)
+;                           (lsp)))
+;   )
 (use-package lsp-jedi
     :hook (python-mode . (lambda()
                            (lsp))))
-
+(use-package consult-lsp)
 (use-package dap-mode
   :after lsp-mode
 
@@ -266,15 +307,39 @@
    ("C-<f9>". dap-debug-restart))
  )
 
-(use-package flycheck
-    :init
-  (global-flycheck-mode)
+(use-package dape
+  :straight (dape :type git :host github :repo "svaante/dape")
+  ;; To use window configuration like gud (gdb-mi)
+  :init
+  (setq dape-buffer-window-arrangement 'gud)
+
+  :config
+  ;; Info buffers to the right
+  ;; (setq dape-buffer-window-arrangement 'right)
+
+  ;; To not display info and/or buffers on startup
+  ;; (remove-hook 'dape-on-start-hooks 'dape-info)
+  ;; (remove-hook 'dape-on-start-hooks 'dape-repl)
+
+  ;; To display info and/or repl buffers on stopped
+   (add-hook 'dape-on-stopped-hooks 'dape-info)
+   (add-hook 'dape-on-stopped-hooks 'dape-repl)
+
+  ;; By default dape uses gdb keybinding prefix
+  ;; If you do not want to use any prefix, set it to nil.
+  ;; (setq dape-key-prefix "\C-x\C-a")
+
+  ;; Kill compile buffer on build success
+  ;; (add-hook 'dape-compile-compile-hooks 'kill-buffer)
+
+  ;; Save buffers on startup, useful for interpreted languages
+  ;; (add-hook 'dape-on-start-hooks
+  ;;           (defun dape--save-on-start ()
+  ;;             (save-some-buffers t t)))
+
+  ;; Projectile users
+  (setq dape-cwd-fn 'projectile-project-root)
   )
-(use-package flycheck-pycheckers
-    :after flycheck
-    :init
-    (add-hook 'flycheck-mode-hook #'flycheck-pycheckers-setup)
-    )
 
 (use-package lsp-ui)
 (use-package lsp-treemacs)
@@ -301,6 +366,15 @@
     (add-to-list 'compilation-error-regexp-alist '("^ *--> *\\([^:]*\\):\\([0-9]*\\):\\([0-9]*\\)" 1 2 3))
 
     )
+
+(use-package smart-mode-line
+    :init
+  (setq sml/theme 'light)
+  (setq sml/no-confirm-load-theme t)
+    :config
+  (sml/setup)
+  )
+
 ;; (defun json-rpc-pid (process)
 ;;   (error "This shouldn't exist")
 ;;   (if process
@@ -413,27 +487,23 @@
 ; rainbow delimiters is incompatible with tree-sitter for now
 ;(use-package rainbow-delimiters
 ;  :init
-;  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode)
+;  (add-hook 'prog-mode-hook #'rainbow-delimiters-use)
 ;)
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
+(require 'smart-split)
+(require 'wait-gdb)
+(require 'xp-notifications)
+(require 'compile-notifications)
+(require 'ansi-color-buffer)
+
 ; turn on major features 
-;(counsel-mode 1)
 (yas-global-mode 1)
 (server-start)
 
-; require things that aren't in use package
-(require 'generic-x)
-(require 'notifications)
-(require 'subr-x)
-(require 'smart-split)
-(require 'wait-gdb)
-(require 'compile-notifications)
-(require 'ansi-color-buffer)
-;(require 'bazel-mode)
-(load-file "~/.emacs.lib/org-roam-logseq.el")
+;(load-file "~/.emacs.lib/org-roam-logseq.el")
 (projectile-global-mode)
 
 ; basic settings that keep me sane
@@ -451,7 +521,12 @@
 (toggle-scroll-bar -1)
 (tool-bar-mode -1)
 (setq-default display-buffer-reuse-frames t)
-(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+(defun no-rg-ansi-color-mode-on ()
+  (message (concat "acmo " (buffer-name)))
+  (if (not (string= (buffer-name) "*rg*"))
+      (ansi-color-for-comint-mode-on)
+      ))
+;(add-hook 'shell-mode-hook 'no-rg-ansi-color-mode-on)
 (setq truncate-partial-width-windows nil)
 (setq c-basic-offset 4)
 (setq tab-width 4)
@@ -476,14 +551,9 @@
 ; Global keybindings
 (global-set-key [(control tab)] 'other-window)
 (global-set-key [(control meta tab)] 'other-frame)
-;(global-set-key (kbd "C-s") 'swiper-isearch)
 (global-set-key (kbd "M-s") 'isearch-repeat-forward)
 (global-set-key [(control /)] 'projectile-compile-project)
 (global-set-key (kbd "C-c p") 'projectile-command-map)
-;(global-set-key (kbd "C-x b") 'counsel-switch-buffer)
-;(global-set-key (kbd "M-x") 'counsel-M-x)
-;(global-set-key (kbd "C-x C-f") 'counsel-find-file)
-;(global-set-key (kbd "M-y") 'counsel-yank-pop)
 (global-set-key [(control =)] 'copy-region-as-kill)
 (global-unset-key [(meta g)])
 (global-set-key [(meta g)] 'goto-line)
@@ -495,8 +565,6 @@
 (setq magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1)
 
 ; projectile settings
-                                        ;(setq projectile-completion-system 'ivy)
-;(counsel-projectile-mode)
 (setq projectile-sort-order 'recentf)
 
 ; C/C++ settings
@@ -544,9 +612,6 @@
   (let ((root (projectile-project-root dir)))
     (and root (cons 'transient root))))
 
-;(setq company-backends
-;      (cons 'company-capf
-;            (remove 'company-capf company-backends)))
 (with-eval-after-load 'project
   (add-to-list 'project-find-functions
                'projectile-proj-find-function))
@@ -562,6 +627,7 @@
 ;(advice-add 'compilation-filter :around #'my/advice-compilation-filter)
 ;(setq xterm-color-use-bold-for-bright t)
 
+
 ; load local environment
 (if (file-exists-p "~/.emacs.local")
     (add-to-list 'load-path "~/.emacs.local"))
@@ -576,20 +642,3 @@
   (select-frame this-frame)
   (smart-split))
 
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages nil)
- '(safe-local-variable-values
-   '((projectile-project-compilation-cmd . "bazel build //ros/src/planning_stack/...")))
- '(visible-bell t)
- '(warning-suppress-log-types '((comp) (comp)))
- '(warning-suppress-types '((comp))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
