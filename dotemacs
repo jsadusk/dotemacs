@@ -183,7 +183,7 @@
 (use-package toml-mode)
 (use-package yaml-mode)
 (use-package markdown-mode)
-(use-package rust-mode)
+(use-package rustic)
 (use-package lv)
 ;; (use-package eglot
 ;;    :bind
