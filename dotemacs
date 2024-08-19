@@ -54,6 +54,17 @@
 (setq custom-file (concat user-emacs-directory "custom.el"))
 
 (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
+(add-to-list 'major-mode-remap-alist '(cmake-mode . cmake-ts-mode))
+(add-to-list 'major-mode-remap-alist '(bash-mode . bash-ts-mode))
+;(add-to-list 'major-mode-remap-alist '(c-mode . c-ts-mode))
+;(add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode))
+(add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
+(add-to-list 'major-mode-remap-alist '(go-mode . go-ts-mode))
+(add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
+(add-to-list 'major-mode-remap-alist '(toml-mode . toml-ts-mode))
+(add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
+(add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+
 
 (use-package org
   :init
@@ -179,7 +190,7 @@
 
  :config
  (add-to-list 'eglot-server-programs
-              `((c++-ts-mode) ,"clangd"))
+              `((c++-mode) ,"clangd"))
   (add-to-list 'eglot-server-programs
                `((rust-ts-mode) ,"rust-analyzer"))
   (add-to-list 'eglot-server-programs
@@ -188,7 +199,7 @@
 
   :hook (
          (python-ts-mode . eglot-ensure)
-         (c++-ts-mode . eglot-ensure)
+         (c++-mode . eglot-ensure)
          (rust-ts-mode . eglot-ensure)
          )
   )
@@ -207,7 +218,7 @@
   :hook
   (
    (python-ts-mode . eldoc-box-hover-mode)
-   (c++-ts-mode . eldoc-box-hover-mode)
+   (c++-mode . eldoc-box-hover-mode)
    (rust-ts-mode . eldoc-box-hover-mode)
    )
   )
@@ -396,13 +407,13 @@
 			(inextern-lang .[0])
 			(arglist-intro . [6])))))
 (c-add-style "my-cc-style" my-cc-style)
-(add-hook 'c++-ts-mode-hook
+(add-hook 'c++-mode-hook
 	  '(lambda ()
 	    (c-set-style "my-cc-style")
 	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
             ))
 
-(add-hook 'c-ts-mode-hook
+(add-hook 'c--mode-hook
 	  '(lambda ()
 	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
             (eldoc-box-hover-mode)))
