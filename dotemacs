@@ -1,10 +1,10 @@
 ;-*- lisp -*-
 ; package management - use straight.el and use-package
-
-(dolist (newpath '("~/.local/bin" "~/.cargo/bin/rust-analyzer" "~/bin"))
-  (setenv "PATH" (concat (getenv "PATH") ":" newpath))
+(let ((home-dir (getenv "HOME")))
+  (dolist (newpath '("~/.local/bin" "~/.cargo/bin/rust-analyzer" "~/bin" "~/.cargo/bin/" "/usr/local/bin"))
+  (setenv "PATH" (concat (getenv "PATH") ":" (string-replace "~" home-dir newpath)))
   (setq exec-path (append exec-path '(newpath)))
-  )
+  ))
 
 (package-initialize)
 (require 'package)
@@ -27,6 +27,12 @@
 (straight-use-package 'use-package)
 (setq straight-use-package-by-default t)
 (setq use-package-always-ensure t)
+(use-package straight
+  :custom
+  ;; add project and flymake to the pseudo-packages variable so straight.el doesn't download a separate version than what eglot downloads.
+  (straight-built-in-pseudo-packages '(emacs eglot nadvice python image-mode project flymake xref))
+  (straight-use-package-by-default t))
+
 (use-package gcmh
     :config
   (gcmh-mode 1))
@@ -40,12 +46,12 @@
 (require 'tramp)
 (setq tramp-verbose 0)
 (setq tramp-ssh-controlmaster-options "-o ControlMaster=auto")
+(setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
+(setq tramp-backup-directory-alist nil)
 (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
-(add-to-list 'backup-directory-alist
-             (cons tramp-file-name-regexp nil))
 ;; Check whether this speeds up dev env
-;(setq vc-handled-backends '())
-;(setq vc-ignore-dir-regexp ".+")
+(setq vc-handled-backends '())
+(setq vc-ignore-dir-regexp ".+")
 (setq remote-file-name-inhibit-locks t)
 (setq vc-follow-symlinks t)
 
@@ -65,6 +71,13 @@
 (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
 (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
 
+(use-package treesit-auto
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  ;(treesit-auto-install-all)
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
 
 (use-package org
   :init
@@ -101,7 +114,7 @@
       :unnarrowed t)
      ))
   :bind
-  (("C-c n l" . org-roam-buffer-toggle)
+  (;("C-c n l" . org-roam-buffer-toggle)
    ("C-c n f" . org-roam-node-find)
    ("C-c n i" . org-roam-node-insert)
    :map org-mode-map
@@ -109,8 +122,36 @@
   :config
   (org-roam-setup)
   )
+(use-package consult-org-roam
+   :ensure t
+   :after org-roam
+   :init
+   (require 'consult-org-roam)
+   ;; Activate the minor mode
+   (consult-org-roam-mode 1)
+   :custom
+   ;; Use `ripgrep' for searching with `consult-org-roam-search'
+   (consult-org-roam-grep-func #'consult-ripgrep)
+   ;; Configure a custom narrow key for `consult-buffer'
+   (consult-org-roam-buffer-narrow-key ?r)
+   ;; Display org-roam buffers right after non-org-roam buffers
+   ;; in consult-buffer (and not down at the bottom)
+   (consult-org-roam-buffer-after-buffers t)
+   :config
+   ;; Eventually suppress previewing for certain functions
+   (consult-customize
+    consult-org-roam-forward-links
+    :preview-key "M-.")
+   :bind
+   ;; Define some convenient keybindings as an addition
+   ("C-c n f" . consult-org-roam-file-find)
+   ("C-c n b" . consult-org-roam-backlinks)
+   ("C-c n B" . consult-org-roam-backlinks-recursive)
+   ("C-c n l" . consult-org-roam-forward-links)
+   ("C-c n r" . consult-org-roam-search))
 
-(use-package project)
+(use-package eat)
+
 (use-package bui)
 (use-package posframe)
 (use-package vertico
@@ -179,10 +220,15 @@
 (defun enable-eglot-flymake-checkers ()
   (interactive)
   (cond ((derived-mode-p 'python-base-mode)
-         (flymake-ruff-load)
-         (flymake-mypy-enable)
+         ;(flymake-ruff-load)
+                                        ;(flymake-mypy-enable)
+         (flymake-collection-hook-setup)
          (add-hook 'flymake-diagnostic-functions 'python-flymake nil t))
         (t nil)))
+
+(use-package flymake-collection
+    :hook
+  (after-init . flymake-collection-hook-setup))
 
 (use-package eglot
    :bind
@@ -195,7 +241,12 @@
                `((rust-ts-mode) ,"rust-analyzer"))
   (add-to-list 'eglot-server-programs
                `((python-ts-mode) ,"jedi-language-server"))
-  (add-hook 'eglot-managed-mode-hook 'enable-eglot-flymake-checkers)
+  (add-to-list 'eglot-stay-out-of 'flymake)
+  (add-hook 'flymake-diagnostic-functions 'eglot-flymake-backend)
+  (add-hook 'flymake-diagnostic-functions 'flymake-collection-mypy)
+
+  ; seems to avoid a bug and speed things up
+  (defun eglot--mode-line-format () )
 
   :hook (
          (python-ts-mode . eglot-ensure)
@@ -204,14 +255,20 @@
          )
   )
 
+(use-package eglot-booster
+    :straight (eglot-booster :type git :host github :repo "jdtsmith/eglot-booster")
+    :after eglot
+    :config (eglot-booster-mode))
+
 (use-package flymake)
-(use-package flymake-ruff)
-(use-package flymake-mypy
-  :straight (flymake-mypy
-             :type git
-             :host github
-             :repo "com4/flymake-mypy")
-    )
+;(use-package flymake-ruff)
+;(use-package flymake-mypy
+;  :straight (flymake-mypy
+;             :type git
+;             :host github
+;             :repo "com4/flymake-mypy")
+                                        ;    )
+
 (use-package flymake-popon)
 (use-package eldoc-box
     :custom-face
@@ -222,7 +279,8 @@
    (rust-ts-mode . eldoc-box-hover-mode)
    )
   )
-(use-package breadcrumb)
+
+;(use-package breadcrumb)
 (use-package jinja2-mode)
 (use-package git-link)
 ;; (use-package xterm-color
@@ -246,10 +304,10 @@
     )
 (use-package multi-vterm)
 (use-package scad-mode)
-(use-package forge :after magit)
-(use-package github-review :after forge)
+;(use-package forge :after magit)
+;(use-package github-review :after forge)
 (electric-pair-mode 1)
-(use-package deadgrep)
+;(use-package deadgrep)
 (use-package rg)
 (use-package expand-region
   :bind ("C-M-SPC" . er/expand-region))
@@ -320,13 +378,49 @@
     :config
   (sml/setup)
   )
-
-
+(use-package coterm
+    :config
+  (coterm-mode)
+  )
+(use-package fancy-compilation
+    :commands (fancy-compilation-mode))
+(with-eval-after-load 'compile
+  (fancy-compilation-mode))
 ; rainbow delimiters is incompatible with tree-sitter for now
 ;(use-package rainbow-delimiters
 ;  :init
 ;  (add-hook 'prog-mode-hook #'rainbow-delimiters-use)
 ;)
+(use-package treemacs)
+
+(use-package elysium
+  :custom
+  ;; Below are the default values
+  (elysium-window-size 0.33) ; The elysium buffer will be 1/3 your screen
+  (elysium-window-style 'vertical)) ; Can be customized to horizontal
+
+(use-package gptel
+  :config
+  (setq
+   gptel-backend (gptel-make-ollama "Ollama"
+                   :host "localhost:11434"
+                   :stream t
+                   :models '(codestral:22b))))
+(use-package smerge-mode
+  :ensure nil
+  :hook
+  (prog-mode . smerge-mode))
+
+(use-package trunk-io-tree
+    :straight (trunk-io-tree :type git :host github :repo "jsadusk/trunk-io-tree")
+    )
+
+;; Doesn't seem to eval yet, but interesting for later
+;(use-package visual-replace
+;    :straight (visual-replace :type git :host github :repo "szermatt/visual-replace")
+;    )
+
+
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
@@ -441,13 +535,13 @@
 ; Install hook to use clang-format on save
 ;(add-hook 'before-save-hook 'clang-format-before-save)
 
-(defun projectile-proj-find-function (dir)
-  (let ((root (projectile-project-root dir)))
-    (and root (cons 'transient root))))
+;; (defun projectile-proj-find-function (dir)
+;;   (let ((root (projectile-project-root dir)))
+;;     (and root (cons 'transient root))))
 
-(with-eval-after-load 'project
-  (add-to-list 'project-find-functions
-               'projectile-proj-find-function))
+;; (with-eval-after-load 'project
+;;   (add-to-list 'project-find-functions
+;;                'projectile-proj-find-function))
 
 (setq rust-format-on-save t)
 ;(setq rustic-lsp-client 'eglot)
