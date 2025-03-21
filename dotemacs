@@ -6,36 +6,67 @@
   (setq exec-path (append exec-path '(newpath)))
   ))
 
-(package-initialize)
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.milkbox.net/packages/") t)
+(setq package-enable-at-startup nil)
 
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+(defvar elpaca-installer-version 0.10)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+ ;; Install use-package support
+(elpaca elpaca-use-package
+  ;; Enable :elpaca use-package keyword.
+  (elpaca-use-package-mode)
+  ;; Assume :elpaca t unless otherwise specified.
+  (setq elpaca-use-package-by-default t))
 
-(straight-use-package 'use-package)
-(setq straight-use-package-by-default t)
-(setq use-package-always-ensure t)
-(use-package straight
-  :custom
-  ;; add project and flymake to the pseudo-packages variable so straight.el doesn't download a separate version than what eglot downloads.
-  (straight-built-in-pseudo-packages '(emacs eglot nadvice python image-mode project flymake xref))
-  (straight-use-package-by-default t))
+;; Block until current queue processed.
+(elpaca-wait)
+(use-package diminish
+    :ensure t
+    :config
+    (diminish 'eldoc-mode)
+    )
 
 (use-package gcmh
+    :diminish gcmh-mode
     :config
   (gcmh-mode 1))
+
+(elpaca-wait)
 
 ; require things that aren't in use package
 (require 'generic-x)
@@ -45,10 +76,17 @@
 ; configure tramp
 (require 'tramp)
 (setq tramp-verbose 0)
-(setq tramp-ssh-controlmaster-options "-o ControlMaster=auto")
+;(connection-local-set-profile-variables
+; 'remote-direct-async-process
+; '((tramp-direct-async-process . t)))
 (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
 (setq tramp-backup-directory-alist nil)
 (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
+(add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+(add-to-list 'tramp-remote-path "~/.local/bin/")
+(add-to-list 'tramp-remote-path "~/.cargo/bin/")
+(add-to-list 'tramp-remote-path "~/bin/")
+(add-to-list 'tramp-remote-process-environment "OLLAMA_API_BASE=http://127.0.0.1:11434")
 ;; Check whether this speeds up dev env
 (setq vc-handled-backends '())
 (setq vc-ignore-dir-regexp ".+")
@@ -62,8 +100,6 @@
 (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
 (add-to-list 'major-mode-remap-alist '(cmake-mode . cmake-ts-mode))
 (add-to-list 'major-mode-remap-alist '(bash-mode . bash-ts-mode))
-;(add-to-list 'major-mode-remap-alist '(c-mode . c-ts-mode))
-;(add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode))
 (add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
 (add-to-list 'major-mode-remap-alist '(go-mode . go-ts-mode))
 (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
@@ -75,7 +111,6 @@
   :custom
   (treesit-auto-install 'prompt)
   :config
-  ;(treesit-auto-install-all)
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
 
@@ -84,6 +119,12 @@
   (define-key global-map "\C-cl" 'org-store-link)
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
+  (setq org-agenda-window-setup 'current-window)
+  (setq org-todo-keywords
+        '((sequence "TODO" "WORKING" "BACKGROUND" "BLOCKED" "NEXT"
+           "|"
+           "DONE" "NOTDOING" "DELEGATED"))
+        )
   )
 (use-package dockerfile-mode)
 (use-package org-roam
@@ -121,10 +162,59 @@
    ("C-M-i" . completion-at-point))
   :config
   (org-roam-setup)
+
+  (defun roam-extra:todo-p ()
+    "Return non-nil if current buffer has any TODO entry.
+
+TODO entries marked as done are ignored, meaning the this
+function returns nil if current buffer contains only completed
+tasks."
+    (org-element-map
+        (org-element-parse-buffer 'headline)
+        'headline
+      (lambda (h)
+        (eq (org-element-property :todo-type h)
+            'todo))
+      nil 'first-match))
+
+  (defun roam-extra:update-todo-tag ()
+    "Update TODO tag in the current buffer."
+    (message "major %s" (prin1-to-string major-mode))
+    (message "org %s" (prin1-to-string 'org-mode))
+    (when (and (not (active-minibuffer-window))
+               (eq major-mode 'org-mode))
+      (let* ((file (buffer-file-name (buffer-base-buffer)))
+             (all-tags (org-roam--extract-tags file))
+             (prop-tags (org-roam--extract-tags-prop file))
+             (tags prop-tags))
+        (if (roam-extra:todo-p)
+            (setq tags (seq-uniq (cons "todo" tags)))
+            (setq tags (remove "todo" tags)))
+        (unless (equal prop-tags tags)
+          (org-roam--set-global-prop
+           "roam_tags"
+           (combine-and-quote-strings tags))))))
+
+  (defun roam-extra:todo-files ()
+    "Return a list of note files containing todo tag."
+    (seq-map
+     #'car
+     (org-roam-db-query
+      [:select file
+      :from tags
+      :where (like tags (quote "%\"todo\"%"))])))
+
+  (defun roam-extra:update-todo-files (&rest _)
+    "Update the value of `org-agenda-files'."
+    (setq org-agenda-files (roam-extra:todo-files)))
+  (add-hook 'org-roam-file-setup-hook #'roam-extra:update-todo-tag)
+  (add-hook 'before-save-hook #'roam-extra:update-todo-tag)
+  (advice-add 'org-agenda :before #'roam-extra:update-todo-files)
   )
 (use-package consult-org-roam
    :ensure t
    :after org-roam
+   :diminish consult-org-roam-mode
    :init
    (require 'consult-org-roam)
    ;; Activate the minor mode
@@ -180,18 +270,56 @@
 
   :init
   (marginalia-mode))
-(use-package all-the-icons-completion
-  :init
-  (all-the-icons-completion-mode)
-  (add-hook 'marginalia-mode-hook #'all-the-icons-completion-marginalia-setup))
 
-(use-package savehist
-  :init
-  (savehist-mode))
-(use-package clang-format)
+(use-package nerd-icons)
+(use-package nerd-icons-corfu
+    :after nerd-icons corfu
+    :config
+    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
+    )
+(use-package nerd-icons-completion
+    :after nerd-icons
+    :config
+    (nerd-icons-completion-mode)
+    )
+
+(use-package clang-format
+    :config
+  (global-set-key (kbd "C-c i") 'clang-format-region)
+  (global-set-key (kbd "C-c u") 'clang-format-buffer)
+)
 (use-package magit)
-(use-package yasnippet)
-(use-package projectile)
+(use-package yasnippet
+    :diminish yas-minor-mode
+    :config
+    (yas-global-mode))
+
+(use-package projectile
+    :diminish projectile-mode
+    :config
+
+    ;; This massively speeds up project discovery on tramp
+    (defun projectile-root-git-or-existing (dir)
+      "Retrieve the root directory of the project at DIR using the presence of a .git or an existing project"
+      (let* (
+             (known (seq-map #'expand-file-name (projectile-known-projects)))
+             (existing (seq-find
+                        (lambda (project) (or (string= project dir) (string-prefix-p project dir)))
+                        known))
+        )
+        (if existing
+            existing
+            (locate-dominating-file dir ".git")
+            )
+        )
+      )
+
+    (setq projectile-project-root-functions '(projectile-root-git-or-existing))
+    (setq projectile-indexing-method 'alien)
+    (setq projectile-enable-caching t)
+    (setq projectile-enable-caching 'persistent)
+    (projectile-global-mode)
+    )
 (use-package corfu
 
   :custom
@@ -217,37 +345,68 @@
   :init
   (setq rust-mode-treesitter-derive t))
 
-(defun enable-eglot-flymake-checkers ()
-  (interactive)
-  (cond ((derived-mode-p 'python-base-mode)
-         ;(flymake-ruff-load)
-                                        ;(flymake-mypy-enable)
-         (flymake-collection-hook-setup)
-         (add-hook 'flymake-diagnostic-functions 'python-flymake nil t))
-        (t nil)))
-
-(use-package flymake-collection
-    :hook
-  (after-init . flymake-collection-hook-setup))
-
 (use-package eglot
    :bind
  (("C-." . eglot-code-actions))
 
  :config
+ (setq eglot-events-buffer-size 0)
+ (fset #'jsonrpc--log-event #'ignore)
  (add-to-list 'eglot-server-programs
               `((c++-mode) ,"clangd"))
-  (add-to-list 'eglot-server-programs
-               `((rust-ts-mode) ,"rust-analyzer"))
-  (add-to-list 'eglot-server-programs
-               `((python-ts-mode) ,"jedi-language-server"))
-  (add-to-list 'eglot-stay-out-of 'flymake)
-  (add-hook 'flymake-diagnostic-functions 'eglot-flymake-backend)
-  (add-hook 'flymake-diagnostic-functions 'flymake-collection-mypy)
+ (add-to-list 'eglot-server-programs
+              `((rust-ts-mode) ,"rust-analyzer"))
+ (add-to-list 'eglot-server-programs
+              `((python-ts-mode) ,"pylsp_log"))
 
-  ; seems to avoid a bug and speed things up
-  (defun eglot--mode-line-format () )
+ (setq-default eglot-workspace-configuration
+               '(:pylsp
+                 (:plugins
+                  (:jedi (:extra_paths ["waabi" "tools" "docs" "third_party"])
+                   :jedi_completion
+                   (:enabled t
+                    :include_params t
+                    :include_class_objects t
+                    :include_function_objects t
+                    :fuzzy t
+                    :eager t
+                    )
+                   :jedi_hover (:enabled t)
+                   :jedi_references (:enabled t)
+                   :jedi_symbols (:enabled t)
+                   :jedi_definition
+                   (:enabled t
+                    :follow_imports t
+                    :follow_builtin_imports t
+                    :follow_builtin_definitions t
+                    )
+                   :jedi_signature_help (:enabled t)
+                   :ruff
+                   (:enabled t
+                    :formatEnabled t
+                    :lineLength 120
+                    )
+                   ;:pylsp_mypy (:enabled t :dmypy t)
+                   
+                   :rope_autoimport (:enabled t :code_actions (:enabled t))
+                   ;; :pylsp_pyright
+                   ;; (:enabled t
+                   ;;  :pythonpath "tools/python"
+                   ;;  :level "error"
+                   ;;  :skipunannotated t)
 
+                   )
+                  )
+                 )
+               )
+ (setq-default eglot-code-action-indications '(-nearby))
+ (defun eglot-format-if-managed ()
+  (interactive)
+  (if (member 'eglot--managed-mode local-minor-modes)
+      (eglot-format-buffer)
+      )
+  )
+ (add-hook 'before-save-hook 'eglot-format-if-managed)
   :hook (
          (python-ts-mode . eglot-ensure)
          (c++-mode . eglot-ensure)
@@ -255,45 +414,28 @@
          )
   )
 
-(use-package eglot-booster
-    :straight (eglot-booster :type git :host github :repo "jdtsmith/eglot-booster")
-    :after eglot
-    :config (eglot-booster-mode))
-
-(use-package flymake)
-;(use-package flymake-ruff)
-;(use-package flymake-mypy
-;  :straight (flymake-mypy
-;             :type git
-;             :host github
-;             :repo "com4/flymake-mypy")
-                                        ;    )
+(use-package flymake
+    :diminish flymake-mode
+    )
 
 (use-package flymake-popon)
 (use-package eldoc-box
+    :diminish eldoc-box-hover-mode
+    :after eldoc
     :custom-face
   :hook
   (
-   (python-ts-mode . eldoc-box-hover-mode)
+   (python-mode . eldoc-box-hover-mode)
    (c++-mode . eldoc-box-hover-mode)
-   (rust-ts-mode . eldoc-box-hover-mode)
+   (rust-mode . eldoc-box-hover-mode)
    )
   )
 
-;(use-package breadcrumb)
+
+
+(use-package breadcrumb)
 (use-package jinja2-mode)
 (use-package git-link)
-;; (use-package xterm-color
-;;     :config
-;;   (setq compilation-environment '("TERM=xterm-256color"))
-;;   (defun my/advice-compilation-filter (f proc string)
-;;     (if (not (string-prefix-p "/usr/bin/rg" (nth 2 (process-command proc))))
-;;         (funcall f proc (xterm-color-filter string))
-;;         (funcall f proc string)
-;; 	)
-;;     )
-;;   (advice-add 'compilation-filter :around #'my/advice-compilation-filter)
-;;   )
 (use-package eterm-256color)
 (use-package vterm
     :after eterm-256color
@@ -307,15 +449,13 @@
 ;(use-package forge :after magit)
 ;(use-package github-review :after forge)
 (electric-pair-mode 1)
-;(use-package deadgrep)
 (use-package rg)
 (use-package expand-region
   :bind ("C-M-SPC" . er/expand-region))
 (use-package protobuf-mode)
 
-;; Still need to make this work
 (use-package dape
-  :straight (dape :type git :host github :repo "svaante/dape")
+  :ensure (dape :type git :host github :repo "svaante/dape")
   ;; To use window configuration like gud (gdb-mi)
   :init
   (setq dape-buffer-window-arrangement 'gud)
@@ -349,7 +489,7 @@
   )
 
 (use-package bazel
-    :straight (bazel :type git :host github :repo "bazelbuild/emacs-bazel-mode")
+    :ensure (bazel :type git :host github :repo "bazelbuild/emacs-bazel-mode")
     :config
     (defface cargo-error-code
         '((t :foreground "red"))
@@ -383,14 +523,11 @@
   (coterm-mode)
   )
 (use-package fancy-compilation
-    :commands (fancy-compilation-mode))
-(with-eval-after-load 'compile
-  (fancy-compilation-mode))
-; rainbow delimiters is incompatible with tree-sitter for now
-;(use-package rainbow-delimiters
-;  :init
-;  (add-hook 'prog-mode-hook #'rainbow-delimiters-use)
-;)
+    :commands (fancy-compilation-mode)
+    :config
+    (with-eval-after-load 'compile
+      (fancy-compilation-mode))
+    )
 (use-package treemacs)
 
 (use-package elysium
@@ -407,20 +544,23 @@
                    :stream t
                    :models '(codestral:22b))))
 (use-package smerge-mode
+  :diminish smerge-mode
   :ensure nil
   :hook
   (prog-mode . smerge-mode))
 
-(use-package trunk-io-tree
-    :straight (trunk-io-tree :type git :host github :repo "jsadusk/trunk-io-tree")
+(use-package aidermacs
+    :ensure (:host github :repo "MatthewZMD/aidermacs" :files ("*.el"))
+    :config
+    (setq aidermacs-default-model "ollama_chat/codestral")
+    (global-set-key (kbd "C-c a") 'aidermacs-transient-menu)
     )
 
-;; Doesn't seem to eval yet, but interesting for later
-;(use-package visual-replace
-;    :straight (visual-replace :type git :host github :repo "szermatt/visual-replace")
-;    )
+(use-package visual-replace
+    :ensure (visual-replace :type git :host github :repo "szermatt/visual-replace")
+    )
 
-
+(use-package hydra)
 
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
@@ -432,11 +572,7 @@
 (require 'ansi-color-buffer)
 
 ; turn on major features 
-(yas-global-mode 1)
 (server-start)
-
-;(load-file "~/.emacs.lib/org-roam-logseq.el")
-(projectile-global-mode)
 
 ; basic settings that keep me sane
 (add-to-list 'default-frame-alist '(background-color . "black"))
@@ -471,6 +607,7 @@
   (setq mac-option-modifier 'super)
   (add-to-list 'default-frame-alist '(font . "Inconsolata-16"))
 )
+(savehist-mode)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
@@ -517,34 +654,8 @@
             (setq python-indent-offset 4)
             (eldoc-box-hover-mode)))
 
-; clang format
-(require 'clang-format)
-(global-set-key (kbd "C-c i") 'clang-format-region)
-(global-set-key (kbd "C-c u") 'clang-format-buffer)
-
-(setq clang-format-executable "clang-format")
-(defun clang-format-before-save ()
-  "Add this to .emacs to clang-format on save
- (add-hook 'before-save-hook 'clang-format-before-save)."
  
- 
-  (interactive)
-  (when (eq major-mode 'c++-mode) (clang-format-buffer)))
- 
- 
-; Install hook to use clang-format on save
-;(add-hook 'before-save-hook 'clang-format-before-save)
-
-;; (defun projectile-proj-find-function (dir)
-;;   (let ((root (projectile-project-root dir)))
-;;     (and root (cons 'transient root))))
-
-;; (with-eval-after-load 'project
-;;   (add-to-list 'project-find-functions
-;;                'projectile-proj-find-function))
-
 (setq rust-format-on-save t)
-;(setq rustic-lsp-client 'eglot)
 
 ; compilation-mode tweaks
 (compile-notifications)
