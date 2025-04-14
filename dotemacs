@@ -68,44 +68,82 @@
 
 (elpaca-wait)
 
-; require things that aren't in use package
-(require 'generic-x)
-(require 'notifications)
-(require 'subr-x)
+(use-package tramp
+    :ensure nil
+    :config
+  (setq tramp-verbose 0)
+  (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
+  (setq tramp-backup-directory-alist nil)
+  (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+  (add-to-list 'tramp-remote-path "~/.local/bin/")
+  (add-to-list 'tramp-remote-path "~/.cargo/bin/")
+  (add-to-list 'tramp-remote-path "~/bin/")
+  (setq tramp-ssh-controlmaster-options nil)
+  (setq vc-handled-backends '())
+  (setq vc-ignore-dir-regexp ".+")
+  (setq remote-file-name-inhibit-locks t)
+  (setq vc-follow-symlinks t)
+  )
+(use-package emacs
+    :ensure nil
+    :bind
+    (
+     ("C-<tab>" . other-window)
+     ("C-M-<tab>" . other-frame)
+     ("C-/" . projectile-compile-project)
+     ("C-c p" . projectile-command-map)
+     ("C-=" . copy-region-as-kill)
+     ("M-g" . goto-line)
+     )
+    
+    :config
+    (setq custom-file (concat user-emacs-directory "custom.el"))
 
-; configure tramp
-(require 'tramp)
-(setq tramp-verbose 0)
-;(connection-local-set-profile-variables
-; 'remote-direct-async-process
-; '((tramp-direct-async-process . t)))
-(setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
-(setq tramp-backup-directory-alist nil)
-(setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
-(add-to-list 'tramp-remote-path 'tramp-own-remote-path)
-(add-to-list 'tramp-remote-path "~/.local/bin/")
-(add-to-list 'tramp-remote-path "~/.cargo/bin/")
-(add-to-list 'tramp-remote-path "~/bin/")
-(add-to-list 'tramp-remote-process-environment "OLLAMA_API_BASE=http://127.0.0.1:11434")
-;; Check whether this speeds up dev env
-(setq vc-handled-backends '())
-(setq vc-ignore-dir-regexp ".+")
-(setq remote-file-name-inhibit-locks t)
-(setq vc-follow-symlinks t)
-
-(require 'compile)
-
-(setq custom-file (concat user-emacs-directory "custom.el"))
-
-(add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
-(add-to-list 'major-mode-remap-alist '(cmake-mode . cmake-ts-mode))
-(add-to-list 'major-mode-remap-alist '(bash-mode . bash-ts-mode))
-(add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
-(add-to-list 'major-mode-remap-alist '(go-mode . go-ts-mode))
-(add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
-(add-to-list 'major-mode-remap-alist '(toml-mode . toml-ts-mode))
-(add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
-(add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(cmake-mode . cmake-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(bash-mode . bash-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(go-mode . go-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(toml-mode . toml-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+    (add-to-list 'default-frame-alist '(background-color . "black"))
+    (add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
+    (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
+    (add-to-list 'default-frame-alist '(font . "Inconsolata-10"))
+    (setq column-number-mode t)
+    (setq line-number-mode t)
+    (setq mouse-yank-at-point t)
+    (setq indent-tabs-mode nil)
+    (setq-default indent-tabs-mode nil)
+    (global-font-lock-mode)
+    (menu-bar-mode -1)
+    (toggle-scroll-bar -1)
+    (tool-bar-mode -1)
+    (setq-default display-buffer-reuse-frames t)
+    (setq truncate-partial-width-windows nil)
+    (setq c-basic-offset 4)
+    (setq tab-width 4)
+    (show-paren-mode)
+    (setq show-trailing_whitespace t)
+    (transient-mark-mode t)
+    (if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
+    (global-so-long-mode)
+    (pixel-scroll-precision-mode)
+    (when (eq system-type 'darwin)
+      (setq visible-bell nil)
+      (setq ring-bell-function 'ignore)
+      (setq mac-option-key-is-meta nil)
+      (setq mac-command-key-is-meta t)
+      (setq mac-command-modifier 'meta)
+      (setq mac-option-modifier 'super)
+      (add-to-list 'default-frame-alist '(font . "Inconsolata-16"))
+      )
+    (savehist-mode)
+    (server-start)
+    )
 
 (use-package treesit-auto
   :custom
@@ -179,8 +217,6 @@ tasks."
 
   (defun roam-extra:update-todo-tag ()
     "Update TODO tag in the current buffer."
-    (message "major %s" (prin1-to-string major-mode))
-    (message "org %s" (prin1-to-string 'org-mode))
     (when (and (not (active-minibuffer-window))
                (eq major-mode 'org-mode))
       (let* ((file (buffer-file-name (buffer-base-buffer)))
@@ -261,6 +297,7 @@ tasks."
    ("C-x b" . consult-buffer)
    ("M-g" . consult-goto-line)
    ("M-y" . consult-yank-from-kill-ring)
+   ("C-c m" . consult-imenu-multi)
    ))
 
 (use-package marginalia
@@ -271,7 +308,46 @@ tasks."
   :init
   (marginalia-mode))
 
-(use-package nerd-icons)
+(use-package embark
+    :ensure t
+    :after marginalia
+
+  :bind
+  (("C-," . embark-act)         ;; pick some comfortable binding
+   ("C-;" . embark-dwim)        ;; good alternative: M-.
+   ("C-h B" . embark-bindings)) ;; alternative for `describe-bindings'
+
+  :init
+
+  ;; Optionally replace the key help with a completing-read interface
+  (setq prefix-help-command #'embark-prefix-help-command)
+
+  ;; Show the Embark target at point via Eldoc. You may adjust the
+  ;; Eldoc strategy, if you want to see the documentation from
+  ;; multiple providers. Beware that using this can be a little
+  ;; jarring since the message shown in the minibuffer can be more
+  ;; than one line, causing the modeline to move up and down:
+
+  ;; (add-hook 'eldoc-documentation-functions #'embark-eldoc-first-target)
+  ;; (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly)
+
+  :config
+
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
+
+;; Consult users will also want the embark-consult package.
+(use-package embark-consult
+    :ensure t ; only need to install it, embark loads it after consult if found
+    :after embark
+    :hook
+    (embark-collect-mode . consult-preview-at-point-mode))(use-package nerd-icons
+    :after diminish
+    :config
+  )
 (use-package nerd-icons-corfu
     :after nerd-icons corfu
     :config
@@ -283,12 +359,26 @@ tasks."
     (nerd-icons-completion-mode)
     )
 
+;; (use-package delight
+;;     :ensure 't
+;;     :after nerd-icons
+;;     :config
+;;     (delight 'python-mode (nerd-icons-icon-for-mode 'python-mode) :major)
+;;     (delight "Python" (nerd-icons-icon-for-mode 'python-mode) :major)
+;;     (delight 'python-ts-mode (nerd-icons-icon-for-mode 'python-mode) :major)
+;;     )
+
 (use-package clang-format
     :config
   (global-set-key (kbd "C-c i") 'clang-format-region)
   (global-set-key (kbd "C-c u") 'clang-format-buffer)
 )
-(use-package magit)
+(use-package magit
+    :config
+  (define-key magit-mode-map [(control tab)] 'other-window)
+  (setq magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1)
+  )
+
 (use-package yasnippet
     :diminish yas-minor-mode
     :config
@@ -302,9 +392,10 @@ tasks."
     (defun projectile-root-git-or-existing (dir)
       "Retrieve the root directory of the project at DIR using the presence of a .git or an existing project"
       (let* (
-             (known (seq-map #'expand-file-name (projectile-known-projects)))
+             (abbreviated (abbreviate-file-name dir))
+             (known (projectile-known-projects))
              (existing (seq-find
-                        (lambda (project) (or (string= project dir) (string-prefix-p project dir)))
+                        (lambda (project) (or (string= project abbreviated) (string-prefix-p project dir)))
                         known))
         )
         (if existing
@@ -315,9 +406,10 @@ tasks."
       )
 
     (setq projectile-project-root-functions '(projectile-root-git-or-existing))
-    (setq projectile-indexing-method 'alien)
+    (setq projectile-indexing-method 'hybrid)
     (setq projectile-enable-caching t)
     (setq projectile-enable-caching 'persistent)
+    (setq projectile-sort-order 'recentf)
     (projectile-global-mode)
     )
 (use-package corfu
@@ -346,8 +438,9 @@ tasks."
   (setq rust-mode-treesitter-derive t))
 
 (use-package eglot
-   :bind
- (("C-." . eglot-code-actions))
+    :ensure nil
+    :bind
+    (("C-." . eglot-code-actions))
 
  :config
  (setq eglot-events-buffer-size 0)
@@ -386,19 +479,20 @@ tasks."
                     :formatEnabled t
                     :lineLength 120
                     )
-                   ;:pylsp_mypy (:enabled t :dmypy t)
-                   
-                   :rope_autoimport (:enabled t :code_actions (:enabled t))
-                   ;; :pylsp_pyright
-                   ;; (:enabled t
-                   ;;  :pythonpath "tools/python"
-                   ;;  :level "error"
-                   ;;  :skipunannotated t)
 
+                   ;; These plugins are useful but slow pylsp way down
+                   ;:pylsp_mypy (:enabled t :dmypy t)
+                   ;;pylsp_rope (:enabled t)
+                   ;:rope_autoimport (:enabled t :code_actions (:enabled t))
                    )
+                  )
+               :rust-analyzer
+                 (:rustfmt
+                  (:overrideCommand "/home/waabi-user/.local/bin/rustfmt")
                   )
                  )
                )
+
  (setq-default eglot-code-action-indications '(-nearby))
  (defun eglot-format-if-managed ()
   (interactive)
@@ -415,10 +509,12 @@ tasks."
   )
 
 (use-package flymake
+    :ensure nil
     :diminish flymake-mode
     )
 
 (use-package flymake-popon)
+(use-package eldoc :ensure nil)
 (use-package eldoc-box
     :diminish eldoc-box-hover-mode
     :after eldoc
@@ -513,11 +609,29 @@ tasks."
 
 (use-package smart-mode-line
     :init
-  (setq sml/theme 'light)
+  (setq sml/theme 'dark)
   (setq sml/no-confirm-load-theme t)
     :config
   (sml/setup)
   )
+
+;; (use-package vertico-posframe
+;;     :ensure t
+;;     :after vertico
+;;     :config
+;;     (vertico-posframe-mode 1)
+;;     (setq vertico-posframe-poshandler 'posframe-poshandler-window-bottom-left-corner)
+;;     (setq vertico-posframe-width 103)
+;;     )
+
+;; Doesn't quite do what I want but an interesting example
+;; (use-package maple-minibuffer
+;;     :ensure (maple-minibuffer :type git
+;;                               :host github
+;;                               :repo "honmaple/emacs-maple-minibuffer")
+;;     :hook (after-init . maple-minibuffer-mode)
+;;     )
+
 (use-package coterm
     :config
   (coterm-mode)
@@ -566,70 +680,25 @@ tasks."
 (add-to-list 'load-path "~/.emacs.lib")
 
 (require 'smart-split)
-(require 'wait-gdb)
-(require 'xp-notifications)
 (require 'compile-notifications)
 (require 'ansi-color-buffer)
-
-; turn on major features 
-(server-start)
-
-; basic settings that keep me sane
-(add-to-list 'default-frame-alist '(background-color . "black"))
-(add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
-(add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
-(add-to-list 'default-frame-alist '(font . "Inconsolata-10"))
-(setq column-number-mode t)
-(setq line-number-mode t)
-(setq mouse-yank-at-point t)
-(setq indent-tabs-mode nil)
-(setq-default indent-tabs-mode nil)
-(global-font-lock-mode)
-(menu-bar-mode -1)
-(toggle-scroll-bar -1)
-(tool-bar-mode -1)
-(setq-default display-buffer-reuse-frames t)
-(setq truncate-partial-width-windows nil)
-(setq c-basic-offset 4)
-(setq tab-width 4)
-(show-paren-mode)
-(setq show-trailing_whitespace t)
-(transient-mark-mode t)
-(if (fboundp 'blink-cursor-mode) (blink-cursor-mode 0))
-(global-so-long-mode)
-(pixel-scroll-precision-mode)
-(when (eq system-type 'darwin)
-  (setq visible-bell nil)
-  (setq ring-bell-function 'ignore)
-  (setq mac-option-key-is-meta nil)
-  (setq mac-command-key-is-meta t)
-  (setq mac-command-modifier 'meta)
-  (setq mac-option-modifier 'super)
-  (add-to-list 'default-frame-alist '(font . "Inconsolata-16"))
-)
-(savehist-mode)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
 ; Global keybindings
-(global-set-key [(control tab)] 'other-window)
-(global-set-key [(control meta tab)] 'other-frame)
-(global-set-key (kbd "M-s") 'isearch-repeat-forward)
-(global-set-key [(control /)] 'projectile-compile-project)
-(global-set-key (kbd "C-c p") 'projectile-command-map)
-(global-set-key [(control =)] 'copy-region-as-kill)
-(global-unset-key [(meta g)])
-(global-set-key [(meta g)] 'goto-line)
+;; (global-set-key [(control tab)] 'other-window)
+;; (global-set-key [(control meta tab)] 'other-frame)
+;; (global-set-key (kbd "M-s") 'isearch-repeat-forward)
+;; (global-set-key [(control /)] 'projectile-compile-project)
+;; (global-set-key (kbd "C-c p") 'projectile-command-map)
+;; (global-set-key [(control =)] 'copy-region-as-kill)
+;; (global-unset-key [(meta g)])
+;; (global-set-key [(meta g)] 'goto-line)
 
-
-; Turn off magit features that make me insane
-(with-eval-after-load 'magit-mode
-  (define-key magit-mode-map [(control tab)] 'other-window))
-(setq magit-display-buffer-function 'magit-display-buffer-same-window-except-diff-v1)
 
 ; projectile settings
-(setq projectile-sort-order 'recentf)
+;(setq projectile-sort-order 'recentf)
 
 ; C/C++ settings
 (defconst my-cc-style
@@ -655,7 +724,7 @@ tasks."
             (eldoc-box-hover-mode)))
 
  
-(setq rust-format-on-save t)
+;(setq rust-format-on-save t)
 
 ; compilation-mode tweaks
 (compile-notifications)
@@ -679,4 +748,3 @@ tasks."
 (dolist (this-frame (frame-list))
   (select-frame this-frame)
   (smart-split))
-

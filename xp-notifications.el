@@ -72,43 +72,31 @@
 
 (defun xp-notifications/growl-script (appname title message)
   "APPNAME TITLE MESSAGE -- command for growl notification."
-  (format "\"tell application \\\"System Events\\\"
+  (format "tell application \"System Events\"
 set frontApp to name of first application process whose frontmost is true
 end tell
-if frontApp is not \\\"%s\\\" then
-    display notification \\\"%s\\\" with title \\\"%s\\\"
-end if\"" appname message title)
+if frontApp is not \"%s\" then
+    display notification \"%s\" with title \"%s\"
+end if" appname message title)
   )
 
 (defun xp-notify (title message)
   "TITLE MESSAGE --- Send a cross platform notification."
   (interactive)
-  (message "xp-notify style")
-  (message xp-notifications/style)
   (cond
    ((string= xp-notifications/style "dbus")
-    (message "dbus")
-    (if xp-notifications/do-reverse-ssh
-        (xp-notifications/reverse-ssh-command
-         (format "notify-send \"%s\" \"%s\"" title message)
-         )
       (notifications-notify :title title :body message)
-      )
     )
    ((string= xp-notifications/style "growl")
-    (message "growl")
-    (if xp-notifications/do-reverse-ssh
-        (xp-notifications/reverse-ssh-command
-         (format "osascript -e '%s'" (xp-notifications/growl-script "X11.bin" title message)))
       (do-applescript (xp-notifications/growl-script "Emacs" title message))
-    )
     )
    ('t
     (message (concat "unknown: " xp-notifications/style))
     )
    )
-  )
 
+  (if s)
+  )
 
 (provide 'xp-notifications)
 ;;; xp-notifications.el ends here
