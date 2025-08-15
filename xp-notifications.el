@@ -82,7 +82,7 @@ end if" appname message title)
 
 (defun xp-notify (title message)
   "TITLE MESSAGE --- Send a cross platform notification."
-  (interactive)
+  (interactive "sTitle: \nsMessage: ")
   (cond
    ((string= xp-notifications/style "dbus")
       (notifications-notify :title title :body message)
@@ -94,8 +94,6 @@ end if" appname message title)
     (message (concat "unknown: " xp-notifications/style))
     )
    )
-
-  (if s)
   )
 
 (provide 'xp-notifications)

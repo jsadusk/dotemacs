@@ -73,15 +73,14 @@
     :config
   (setq tramp-verbose 0)
   (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
-  (setq tramp-backup-directory-alist nil)
+  (setq tramp-backup-directory-alist backup-directory-alist)
   (setq tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
   (add-to-list 'tramp-remote-path "~/.local/bin/")
   (add-to-list 'tramp-remote-path "~/.cargo/bin/")
   (add-to-list 'tramp-remote-path "~/bin/")
-  (setq tramp-ssh-controlmaster-options nil)
-  (setq vc-handled-backends '())
-  (setq vc-ignore-dir-regexp ".+")
+  (setq vc-handled-backends '(Git))
+  ;(setq vc-ignore-dir-regexp ".+")
   (setq remote-file-name-inhibit-locks t)
   (setq vc-follow-symlinks t)
   )
@@ -90,7 +89,7 @@
     :bind
     (
      ("C-<tab>" . other-window)
-     ("C-M-<tab>" . other-frame)
+     ("C-`" . other-frame)
      ("C-/" . projectile-compile-project)
      ("C-c p" . projectile-command-map)
      ("C-=" . copy-region-as-kill)
@@ -158,6 +157,8 @@
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
   (setq org-agenda-window-setup 'current-window)
+                                        ;(setq org-agenda-files (directory-files-recursively "~/org/todo/" "\\.org$"))
+  (setq org-agenda-files '("~/org/roam/tasks"))
   (setq org-todo-keywords
         '((sequence "TODO" "WORKING" "BACKGROUND" "BLOCKED" "NEXT"
            "|"
@@ -167,86 +168,55 @@
 (use-package dockerfile-mode)
 (use-package org-roam
   :init
-  (if (not (file-exists-p "~/roam"))
+  (if (not (file-exists-p "~/org/roam"))
       (progn 
-        (make-directory "~/roam")
-        (make-directory "~/roam/journals")
-        (make-directory "~/roam/pages")
+        (make-directory "~/org/roam")
+        (make-directory "~/org/roam/journals")
+        (make-directory "~/org/roam/notes")
+        (make-directory "~/org/roam/tasks")
+        (make-directory "~/org/roam/projects")
+        (make-directory "~/org/roam/documents")
         )
       )
   (org-roam-db-autosync-mode)
   (setq org-roam-v2-ack t)
   :custom
-  (org-roam-directory (file-truename "~/roam"))
+  (org-roam-directory (file-truename "~/org/roam"))
   (org-roam-dailies-directory "journals/")
   (org-roam-completion-everywhere t)
   (org-roam-capture-templates
    '(
-     ("d" "default" plain "%?"
-      :target (file+head "pages/${slug}.org"
+     ("n" "Note" plain "%?"
+      :target (file+head "notes/${slug}.org"
                      "#+title: ${title}\n")
       :unnarrowed t)
-     ("j" "job opportunity" plain
-      "\n* Company\n\n-%?\n\n* History\n\n-\n\n* Job Notes\n\n-\n\n* Office\n\n-\n\n* Comp\n\n-\n\n* Next Steps\n\n-\n"
-      :target (file+head "pages/job-${slug}.org"
-               "#+title: ${title}\n")
+     ;; ("j" "job opportunity" plain
+     ;;  "\n* Company\n\n-%?\n\n* History\n\n-\n\n* Job Notes\n\n-\n\n* Office\n\n-\n\n* Comp\n\n-\n\n* Next Steps\n\n-\n"
+     ;;  :target (file+head "pages/job-${slug}.org"
+     ;;           "#+title: ${title}\n")
+     ;;  :unnarrowed t)
+     ("t" "Task list" plain
+       "\n* Tasks for project [[roam:${title} Project]]\n\n* %?"
+      :target (file+head "tasks/${slug}.org"
+               "#+title: ${title} Tasks\n")
+      :unnarrowed t)
+     ("p" "Project" plain
+       "\n* ${title}\n** Tasks: [[roam:${title} Tasks]]\n\n** Overview\n*** %?"
+      :target (file+head "projects/${slug}.org"
+               "#+title: ${title} Project\n")
+      :unnarrowed t)
+     ("d" "Document" plain
+       "\n* ${title}\n\n%?"
+      :target (file+head "documents/${slug}.org"
+               "#+title: Doc: ${title}\n")
       :unnarrowed t)
      ))
-  :bind
-  (;("C-c n l" . org-roam-buffer-toggle)
-   ("C-c n f" . org-roam-node-find)
-   ("C-c n i" . org-roam-node-insert)
-   :map org-mode-map
-   ("C-M-i" . completion-at-point))
   :config
   (org-roam-setup)
-
-  (defun roam-extra:todo-p ()
-    "Return non-nil if current buffer has any TODO entry.
-
-TODO entries marked as done are ignored, meaning the this
-function returns nil if current buffer contains only completed
-tasks."
-    (org-element-map
-        (org-element-parse-buffer 'headline)
-        'headline
-      (lambda (h)
-        (eq (org-element-property :todo-type h)
-            'todo))
-      nil 'first-match))
-
-  (defun roam-extra:update-todo-tag ()
-    "Update TODO tag in the current buffer."
-    (when (and (not (active-minibuffer-window))
-               (eq major-mode 'org-mode))
-      (let* ((file (buffer-file-name (buffer-base-buffer)))
-             (all-tags (org-roam--extract-tags file))
-             (prop-tags (org-roam--extract-tags-prop file))
-             (tags prop-tags))
-        (if (roam-extra:todo-p)
-            (setq tags (seq-uniq (cons "todo" tags)))
-            (setq tags (remove "todo" tags)))
-        (unless (equal prop-tags tags)
-          (org-roam--set-global-prop
-           "roam_tags"
-           (combine-and-quote-strings tags))))))
-
-  (defun roam-extra:todo-files ()
-    "Return a list of note files containing todo tag."
-    (seq-map
-     #'car
-     (org-roam-db-query
-      [:select file
-      :from tags
-      :where (like tags (quote "%\"todo\"%"))])))
-
-  (defun roam-extra:update-todo-files (&rest _)
-    "Update the value of `org-agenda-files'."
-    (setq org-agenda-files (roam-extra:todo-files)))
-  (add-hook 'org-roam-file-setup-hook #'roam-extra:update-todo-tag)
-  (add-hook 'before-save-hook #'roam-extra:update-todo-tag)
-  (advice-add 'org-agenda :before #'roam-extra:update-todo-files)
+  :bind
+  ("C-c n i" . org-roam-node-insert)
   )
+
 (use-package consult-org-roam
    :ensure t
    :after org-roam
@@ -388,28 +358,28 @@ tasks."
     :diminish projectile-mode
     :config
 
-    ;; This massively speeds up project discovery on tramp
-    (defun projectile-root-git-or-existing (dir)
-      "Retrieve the root directory of the project at DIR using the presence of a .git or an existing project"
-      (let* (
-             (abbreviated (abbreviate-file-name dir))
-             (known (projectile-known-projects))
-             (existing (seq-find
-                        (lambda (project) (or (string= project abbreviated) (string-prefix-p project dir)))
-                        known))
-        )
-        (if existing
-            existing
-            (locate-dominating-file dir ".git")
-            )
-        )
-      )
+    ;; ;; This massively speeds up project discovery on tramp
+    ;; (defun projectile-root-git-or-existing (dir)
+    ;;   "Retrieve the root directory of the project at DIR using the presence of a .git or an existing project"
+    ;;   (let* (
+    ;;          (abbreviated (abbreviate-file-name dir))
+    ;;          (known (projectile-known-projects))
+    ;;          (existing (seq-find
+    ;;                     (lambda (project) (or (string= project abbreviated) (string-prefix-p project dir)))
+    ;;                     known))
+    ;;     )
+    ;;     (if existing
+    ;;         existing
+    ;;         (locate-dominating-file dir ".git")
+    ;;         )
+    ;;     )
+    ;;   )
 
-    (setq projectile-project-root-functions '(projectile-root-git-or-existing))
-    (setq projectile-indexing-method 'hybrid)
-    (setq projectile-enable-caching t)
-    (setq projectile-enable-caching 'persistent)
-    (setq projectile-sort-order 'recentf)
+    ;; (setq projectile-project-root-functions '(projectile-root-git-or-existing))
+    ;; (setq projectile-indexing-method 'hybrid)
+    ;; (setq projectile-enable-caching t)
+    ;; (setq projectile-enable-caching 'persistent)
+    ;; (setq projectile-sort-order 'recentf)
     (projectile-global-mode)
     )
 (use-package corfu
@@ -444,54 +414,6 @@ tasks."
 
  :config
  (setq eglot-events-buffer-size 0)
- (fset #'jsonrpc--log-event #'ignore)
- (add-to-list 'eglot-server-programs
-              `((c++-mode) ,"clangd"))
- (add-to-list 'eglot-server-programs
-              `((rust-ts-mode) ,"rust-analyzer"))
- (add-to-list 'eglot-server-programs
-              `((python-ts-mode) ,"pylsp_log"))
-
- (setq-default eglot-workspace-configuration
-               '(:pylsp
-                 (:plugins
-                  (:jedi (:extra_paths ["waabi" "tools" "docs" "third_party"])
-                   :jedi_completion
-                   (:enabled t
-                    :include_params t
-                    :include_class_objects t
-                    :include_function_objects t
-                    :fuzzy t
-                    :eager t
-                    )
-                   :jedi_hover (:enabled t)
-                   :jedi_references (:enabled t)
-                   :jedi_symbols (:enabled t)
-                   :jedi_definition
-                   (:enabled t
-                    :follow_imports t
-                    :follow_builtin_imports t
-                    :follow_builtin_definitions t
-                    )
-                   :jedi_signature_help (:enabled t)
-                   :ruff
-                   (:enabled t
-                    :formatEnabled t
-                    :lineLength 120
-                    )
-
-                   ;; These plugins are useful but slow pylsp way down
-                   ;:pylsp_mypy (:enabled t :dmypy t)
-                   ;;pylsp_rope (:enabled t)
-                   ;:rope_autoimport (:enabled t :code_actions (:enabled t))
-                   )
-                  )
-               :rust-analyzer
-                 (:rustfmt
-                  (:overrideCommand "/home/waabi-user/.local/bin/rustfmt")
-                  )
-                 )
-               )
 
  (setq-default eglot-code-action-indications '(-nearby))
  (defun eglot-format-if-managed ()
@@ -508,6 +430,14 @@ tasks."
          )
   )
 
+(use-package ruff-format
+    :diminish ruff-format-on-save-mode
+    :hook
+    (
+     (python-ts-mode . ruff-format-on-save-mode)
+     )
+    )
+
 (use-package flymake
     :ensure nil
     :diminish flymake-mode
@@ -518,12 +448,9 @@ tasks."
 (use-package eldoc-box
     :diminish eldoc-box-hover-mode
     :after eldoc
-    :custom-face
   :hook
   (
-   (python-mode . eldoc-box-hover-mode)
-   (c++-mode . eldoc-box-hover-mode)
-   (rust-mode . eldoc-box-hover-mode)
+   (eglot-managed-mode . eldoc-box-hover-mode)
    )
   )
 
@@ -550,9 +477,24 @@ tasks."
   :bind ("C-M-SPC" . er/expand-region))
 (use-package protobuf-mode)
 
+(use-package tramp-hlo
+    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo")
+    :config
+    (setup-tramp-hlo)
+    )
+
 (use-package dape
   :ensure (dape :type git :host github :repo "svaante/dape")
   ;; To use window configuration like gud (gdb-mi)
+  :bind
+  (("<f5>" . 'dape-step-out)
+   ("<f6>" . 'dape-step-in)
+   ("<f7>" . 'dape-next)
+   ("<f8>" . 'dape-continue)
+   ("<f9>" . 'dape-pause)
+   ("<f10>" . 'dape-quit)
+   ("M-<down>" . 'dape-stack-select-down)
+   ("M-<up>" . 'dape-stack-select-up))
   :init
   (setq dape-buffer-window-arrangement 'gud)
 
@@ -632,17 +574,56 @@ tasks."
 ;;     :hook (after-init . maple-minibuffer-mode)
 ;;     )
 
-(use-package coterm
-    :config
-  (coterm-mode)
-  )
-(use-package fancy-compilation
-    :commands (fancy-compilation-mode)
-    :config
-    (with-eval-after-load 'compile
-      (fancy-compilation-mode))
-    )
+;(use-package coterm
+;    :config
+;  (coterm-mode)
+                                        ;  )
+
+;; (use-package gdb-mi
+;;   :ensure (:host github :repo "weirdNox/emacs-gdb" :files ("*.el" "*.c" "*.h" "Makefile"))
+;;   :init
+;;   (fmakunbound 'gdb)
+;;   (fmakunbound 'gdb-enable-debug))
+
+;; (use-package fancy-compilation
+;;     :commands (fancy-compilation-mode)
+;;     :config
+;;     (with-eval-after-load 'compile
+;;       (fancy-compilation-mode))
+;;     )
+;; (use-package xterm-color
+;;     :ensure t
+;;     :config
+;;   (setq compilation-environment '("TERM=xterm-256color"))
+;;   (defun color-compilation-filter (proc string)
+;;     (message "In filter")
+;;     (with-current-buffer (process-buffer proc)
+;;        (if (eq major-mode 'compilation-mode)
+;;            (compilation-filter proc (xterm-color string))
+;;            (compilation-filter proc string)
+;;        )
+;;       )
+;;     )
+;;   :hook (compilation-filter . compilation-filter)
+;; )
+  
 (use-package treemacs)
+
+;; (use-package xwwp
+;;     :ensure t
+;;     :config
+;;     (add-to-list 'load-path "~/.emacs.d/elpaca/repos/xwwp")
+;;     :custom
+;;     (xwwp-follow-link-completion-system 'consult)
+;;     :bind
+;;     (:map xwidget-webkit-mode-map
+;;           ("v" . xwwp-follow-link))
+;;     )
+
+;; (use-package xwwp-follow-link-consult
+;;     :ensure t
+;;     :after xwwp
+;;     )
 
 (use-package elysium
   :custom
@@ -676,12 +657,19 @@ tasks."
 
 (use-package hydra)
 
+(use-package hcl-mode)
+
+(use-package ein
+    :config
+  
+    )
+
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
 (require 'smart-split)
 (require 'compile-notifications)
-(require 'ansi-color-buffer)
+;(require 'ansi-color-buffer)
 
 ; file associations
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
@@ -715,13 +703,11 @@ tasks."
 
 (add-hook 'c--mode-hook
 	  '(lambda ()
-	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
-            (eldoc-box-hover-mode)))
+	    (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
 
 (add-hook 'python-ts-mode-hook
           '(lambda()
-            (setq python-indent-offset 4)
-            (eldoc-box-hover-mode)))
+            (setq python-indent-offset 4)))
 
  
 ;(setq rust-format-on-save t)
