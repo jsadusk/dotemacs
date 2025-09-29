@@ -69,7 +69,7 @@
 (elpaca-wait)
 
 (use-package tramp
-    :ensure nil
+    :ensure t
     :config
   (setq tramp-verbose 0)
   (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
@@ -316,20 +316,21 @@
     :ensure t ; only need to install it, embark loads it after consult if found
     :after embark
     :hook
-    (embark-collect-mode . consult-preview-at-point-mode))(use-package nerd-icons
-    :after diminish
-    :config
-  )
-(use-package nerd-icons-corfu
-    :after nerd-icons corfu
-    :config
-    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
-    )
-(use-package nerd-icons-completion
-    :after nerd-icons
-    :config
-    (nerd-icons-completion-mode)
-    )
+    (embark-collect-mode . consult-preview-at-point-mode))
+;; (use-package nerd-icons
+;;     :after diminish
+;;     :config
+;;   )
+;; (use-package nerd-icons-corfu
+;;     :after nerd-icons corfu
+;;     :config
+;;     (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
+;;     )
+;; (use-package nerd-icons-completion
+;;     :after nerd-icons
+;;     :config
+;;     (nerd-icons-completion-mode)
+;;     )
 
 ;; (use-package delight
 ;;     :ensure 't
@@ -341,7 +342,7 @@
 ;;     )
 
 (use-package clang-format
-     :ensure nil
+    ;:ensure nil
     :config
   (global-set-key (kbd "C-c i") 'clang-format-region)
   (global-set-key (kbd "C-c u") 'clang-format-buffer)
@@ -411,7 +412,7 @@
   (setq rust-mode-treesitter-derive t))
 
 (use-package eglot
-    :ensure nil
+    :ensure t
     :bind
     (("C-." . eglot-code-actions))
 
