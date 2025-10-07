@@ -668,6 +668,12 @@
   
     )
 
+(use-package atomic-chrome
+    :ensure (atomic-chrome :type git :host github :repo "KarimAziev/atomic-chrome")
+    :config
+    (atomic-chrome-start-server)
+    )
+
 ; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
