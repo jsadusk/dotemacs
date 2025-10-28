@@ -69,7 +69,7 @@
 (elpaca-wait)
 
 (use-package tramp
-    :ensure t
+    :ensure (tramp :type git :host "git.savannah.gnu.org" :branch "master" :repo "git/tramp" :files (:defaults "lisp/*.el") :version (lambda (_) "2.8.1"))
     :config
   (setq tramp-verbose 0)
   (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
@@ -80,7 +80,6 @@
   (add-to-list 'tramp-remote-path "~/.cargo/bin/")
   (add-to-list 'tramp-remote-path "~/bin/")
   (setq vc-handled-backends '(Git))
-  ;(setq vc-ignore-dir-regexp ".+")
   (setq remote-file-name-inhibit-locks t)
   (setq vc-follow-symlinks t)
   )
@@ -134,11 +133,8 @@
     (when (eq system-type 'darwin)
       (setq visible-bell nil)
       (setq ring-bell-function 'ignore)
-      (setq mac-option-key-is-meta nil)
-      (setq mac-command-key-is-meta t)
       (setq mac-command-modifier 'meta)
       (setq mac-option-modifier 'super)
-      (add-to-list 'default-frame-alist '(font . "Inconsolata-16"))
       )
     (savehist-mode)
     (server-start)
@@ -159,7 +155,6 @@
   (define-key global-map "\C-ca" 'org-agenda)
   (setq org-log-done t)
   (setq org-agenda-window-setup 'current-window)
-                                        ;(setq org-agenda-files (directory-files-recursively "~/org/todo/" "\\.org$"))
   (setq org-agenda-files '("~/org/roam/tasks"))
   (setq org-todo-keywords
         '((sequence "TODO" "WORKING" "BACKGROUND" "BLOCKED" "NEXT"
@@ -169,7 +164,10 @@
   )
 (use-package dockerfile-mode)
 (use-package org-roam
-  :init
+    :init
+  (if (not (file-exists-p "~/org"))
+      (make-directory "~/org")
+      )
   (if (not (file-exists-p "~/org/roam"))
       (progn 
         (make-directory "~/org/roam")
@@ -192,11 +190,6 @@
       :target (file+head "notes/${slug}.org"
                      "#+title: ${title}\n")
       :unnarrowed t)
-     ;; ("j" "job opportunity" plain
-     ;;  "\n* Company\n\n-%?\n\n* History\n\n-\n\n* Job Notes\n\n-\n\n* Office\n\n-\n\n* Comp\n\n-\n\n* Next Steps\n\n-\n"
-     ;;  :target (file+head "pages/job-${slug}.org"
-     ;;           "#+title: ${title}\n")
-     ;;  :unnarrowed t)
      ("t" "Task list" plain
        "\n* Tasks for project [[roam:${title} Project]]\n\n* %?"
       :target (file+head "tasks/${slug}.org"
@@ -330,15 +323,6 @@
 ;;     :after nerd-icons
 ;;     :config
 ;;     (nerd-icons-completion-mode)
-;;     )
-
-;; (use-package delight
-;;     :ensure 't
-;;     :after nerd-icons
-;;     :config
-;;     (delight 'python-mode (nerd-icons-icon-for-mode 'python-mode) :major)
-;;     (delight "Python" (nerd-icons-icon-for-mode 'python-mode) :major)
-;;     (delight 'python-ts-mode (nerd-icons-icon-for-mode 'python-mode) :major)
 ;;     )
 
 (use-package clang-format
@@ -482,9 +466,9 @@
 (use-package protobuf-mode)
 
 (use-package tramp-hlo
-    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo")
+    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo" :protocol ssh)
     :config
-    (setup-tramp-hlo)
+    (tramp-hlo-setup)
     )
 
 (use-package dape
@@ -635,13 +619,7 @@
   (elysium-window-size 0.33) ; The elysium buffer will be 1/3 your screen
   (elysium-window-style 'vertical)) ; Can be customized to horizontal
 
-(use-package gptel
-  :config
-  (setq
-   gptel-backend (gptel-make-ollama "Ollama"
-                   :host "localhost:11434"
-                   :stream t
-                   :models '(codestral:22b))))
+(use-package gptel)
 (use-package smerge-mode
   :diminish smerge-mode
   :ensure nil
