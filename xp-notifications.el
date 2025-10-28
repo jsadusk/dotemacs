@@ -1,4 +1,4 @@
-;;; xp-notifications --- Cross platform notifications
+;;; xp-notifications --- Cross platform notifications  -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 

@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t; -*-
 (defgroup compile-notifications nil
   "Send desktop notifications when compilation fininshes and emacs doesn't have focus"
   :group 'tools)

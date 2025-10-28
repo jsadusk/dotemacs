@@ -1,4 +1,4 @@
-;-*- lisp -*-
+;-*-  mode: lisp; lexical-binding: t;  -*-
 ; package management - use straight.el and use-package
 (let ((home-dir (getenv "HOME")))
   (dolist (newpath '("~/.local/bin" "~/.cargo/bin/rust-analyzer" "~/bin" "~/.cargo/bin/" "/usr/local/bin"))

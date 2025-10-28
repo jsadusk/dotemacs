@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 (defgroup smart-split nil
   "Split a frame into 80 char columns"
   :group 'tools)
