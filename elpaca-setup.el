@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t; -*-
 (setq package-enable-at-startup nil)
 
 (defvar elpaca-installer-version 0.11)

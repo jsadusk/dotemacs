@@ -1,10 +1,12 @@
 ;-*-  mode: lisp; lexical-binding: t;  -*-
-; add my library set
 
+; start elpaca
 (load-file "~/.emacs.lib/elpaca-setup.el")
 
+; add my library set
 (add-to-list 'load-path "~/.emacs.lib")
 
+; initialize packages
 (use-package diminish
     :ensure t
     :config
@@ -29,10 +31,11 @@
   (add-to-list 'tramp-remote-path "~/.local/bin/")
   (add-to-list 'tramp-remote-path "~/.cargo/bin/")
   (add-to-list 'tramp-remote-path "~/bin/")
-  ;(setq vc-handled-backends '(Git))
+  (setq vc-handled-backends '())
   (setq remote-file-name-inhibit-locks t)
   (setq vc-follow-symlinks t)
   (setq enable-remote-dir-locals t)
+  (setq tramp-default-method "ssh")
   )
 
 (use-package emacs
@@ -58,6 +61,8 @@
     (add-to-list 'major-mode-remap-alist '(toml-mode . toml-ts-mode))
     (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
     (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(c++-ts-mode . c++-mode))
+    (add-to-list 'major-mode-remap-alist '(c-ts-mode . c-mode))
     (add-to-list 'default-frame-alist '(background-color . "black"))
     (add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
     (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
@@ -263,20 +268,22 @@
     :after embark
     :hook
     (embark-collect-mode . consult-preview-at-point-mode))
-(use-package nerd-icons
-    :after diminish
-    :config
-  )
-(use-package nerd-icons-corfu
-    :after nerd-icons corfu
-    :config
-    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
-    )
-(use-package nerd-icons-completion
-    :after nerd-icons
-    :config
-    (nerd-icons-completion-mode)
-    )
+
+;; Disable nerd icons for tramp
+;; (use-package nerd-icons
+;;     :after diminish
+;;     :config
+;;   )
+;; (use-package nerd-icons-corfu
+;;     :after nerd-icons corfu
+;;     :config
+;;     (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
+;;     )
+;; (use-package nerd-icons-completion
+;;     :after nerd-icons
+;;     :config
+;;     (nerd-icons-completion-mode)
+;;     )
 
 ;(use-package clang-format
     ;:ensure nil
@@ -325,8 +332,9 @@
     :bind
     (("C-." . eglot-code-actions))
 
- :config
- (setq eglot-events-buffer-size 0)
+    :config
+    (setq eglot-events-buffer-size 0)
+    (setq eglot-events-buffer-config '(:size 0 :format full))
 
  (setq-default eglot-code-action-indications '(-nearby))
  (defun eglot-format-if-managed ()
@@ -336,9 +344,10 @@
       )
   )
  (add-hook 'before-save-hook 'eglot-format-if-managed)
-  :hook (
+ :hook (
          (python-ts-mode . eglot-ensure)
          (c++-mode . eglot-ensure)
+         (c-mode . eglot-ensure)
          (rust-ts-mode . eglot-ensure)
          )
   )
@@ -360,12 +369,13 @@
 (use-package eldoc-box
     :diminish eldoc-box-hover-mode
     :after eldoc
-  :hook
-  (
-   (eglot-managed-mode . eldoc-box-hover-mode)
-   )
-  )
-
+    :config
+    (global-set-key (kbd "C-c C-d") 'eldoc-box-help-at-point)
+    :hook
+    (
+     (eglot-managed-mode . eldoc-box-hover-mode)
+     )
+    )
 
 
 (use-package breadcrumb)
@@ -376,10 +386,39 @@
     :after eterm-256color
     :custom
     (vterm-term-environment-variable "eterm-color")
-    (add-to-list 'vterm-eval-cmds '("xp-notify" xp-notify))
     (vterm-max-scrollback 100000)
+    :config
+    (add-to-list 'vterm-eval-cmds '("xp-notify" xp-notify))
+    (defun vterm-update-pwd (path &optional shortpath)
+      (let* ((connection (file-remote-p default-directory))
+             (shortpath (if shortpath shortpath path))
+             (path (if (string-suffix-p "/" path) path (concat path "/") ))
+             (path (if connection (concat connection path) path))
+             (shortpath (if connection (concat connection shortpath) shortpath))
+             )
+        (setq default-directory path)
+        (rename-buffer (concat "*vterm: " shortpath) t)
+        )
+      )
+    (add-to-list 'vterm-eval-cmds '("vterm-update-pwd" vterm-update-pwd))
     )
-(use-package multi-vterm)
+(use-package multi-vterm
+    :config
+  (defun project-vterm ()
+    "Open a vterm buffer at the project root."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (call-interactively #'multi-vterm)
+      )
+    )
+  (defun home-vterm ()
+    "Open a vterm buffer in the homedir."
+    (interactive)
+    (let ((default-directory (getenv "HOME")))
+      (call-interactively #'multi-vterm)
+      )
+    )
+  )
 (use-package scad-mode)
 
 (electric-pair-mode 1)
@@ -433,8 +472,6 @@
   ;;           (defun dape--save-on-start ()
   ;;             (save-some-buffers t t)))
 
-  ;; Projectile users
-  (setq dape-cwd-fn 'projectile-project-root)
   )
 
 (use-package bazel
@@ -496,28 +533,58 @@
 ;;   (fmakunbound 'gdb)
 ;;   (fmakunbound 'gdb-enable-debug))
 
-;; (use-package fancy-compilation
-;;     :commands (fancy-compilation-mode)
-;;     :config
-;;     (with-eval-after-load 'compile
-;;       (fancy-compilation-mode))
-;;     )
-;; (use-package xterm-color
-;;     :ensure t
-;;     :config
-;;   (setq compilation-environment '("TERM=xterm-256color"))
-;;   (defun color-compilation-filter (proc string)
-;;     (message "In filter")
-;;     (with-current-buffer (process-buffer proc)
-;;        (if (eq major-mode 'compilation-mode)
-;;            (compilation-filter proc (xterm-color string))
-;;            (compilation-filter proc string)
-;;        )
-;;       )
-;;     )
-;;   :hook (compilation-filter . compilation-filter)
-;; )
-  
+
+;; Make compilation mode sane
+(require 'ansi-color)
+
+(defun my/ansi-colorize-compilation-buffer ()
+  "Colorize the compilation buffer using ANSI escape sequences."
+  (when (eq major-mode 'compilation-mode)
+    (let ((inhibit-read-only t))
+      (ansi-color-apply-on-region compilation-filter-start (point-max)))))
+
+(add-hook 'compilation-filter-hook 'my/ansi-colorize-compilation-buffer)
+
+(defun regexp-alternatives (regexps)
+  "Return the alternation of a list of regexps."
+  (mapconcat (lambda (regexp)
+               (concat "\\(?:" regexp "\\)"))
+             regexps "\\|"))
+
+(defvar non-sgr-control-sequence-regexp nil
+  "Regexp that matches non-SGR control sequences.")
+
+(setq non-sgr-control-sequence-regexp
+      (regexp-alternatives
+       '(;; icon name escape sequences
+         "\033\\][0-2];.*?\007"
+         ;; non-SGR CSI escape sequences
+         "\033\\[\\??[0-9;]*[^0-9;m]"
+         ;; noop
+         "\012\033\\[2K\033\\[1F"
+         )))
+
+(defun filter-non-sgr-control-sequences-in-region (begin end)
+  (save-excursion
+    (goto-char begin)
+    (while (re-search-forward
+            non-sgr-control-sequence-regexp end t)
+      (replace-match ""))))
+
+(defun filter-non-sgr-control-sequences-in-output (ignored)
+  (let ((start-marker
+         (or comint-last-output-start
+             (point-min-marker)))
+        (end-marker
+         (process-mark
+          (get-buffer-process (current-buffer)))))
+    (filter-non-sgr-control-sequences-in-region
+     start-marker
+     end-marker)))
+
+(add-hook 'comint-output-filter-functions
+          'filter-non-sgr-control-sequences-in-output)
+
 (use-package treemacs)
 
 ;; (use-package xwwp
@@ -545,24 +612,25 @@
 (use-package gptel
     :diminish gptel
     :config
-  (gptel-make-ollama "Ollama"
-                   :host "localhost:11434"
-                   :stream t
-                   :models '(codestral:22b))
-  
-  (gptel-make-anthropic "Claude"
+    (gptel-make-ollama "Ollama"
+      :host "localhost:11434"
+      :stream t
+      :models '(codestral:22b))
+
+    (setq gptel-backend (gptel-make-anthropic "Claude"
        :stream t
-       :models '(claude-3-7-sonnet-latest)
+       :models '(claude-sonnet-4-5-20250929)
        :key claude-key
        ))
   (gptel-make-anthropic "Claude-thinking"
        :stream t
-       :models '(claude-sonnet-4-5-2025092c9 claude-3-7-sonnet-latest)
+       :models '(claude-sonnet-4-5-2025092)
        :key claude-key
        :request-params '(:thinking (:type "enabled" :budget_tokens 2048)
                          :max_tokens 4096))
+  (setq gptel-default-backend "Claude")
+ )
 
-  )
 
 (use-package smerge-mode
   :diminish smerge-mode
@@ -599,6 +667,7 @@
 
 (require 'smart-split)
 (require 'compile-notifications)
+(require 'reopen-buffers)
 
 (use-package cc-mode
     :ensure nil
@@ -620,6 +689,14 @@
 	    '(lambda ()
 	      (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
   )
+(use-package c-ts-mode
+  :ensure nil
+  :init
+  (add-hook 'c-ts-mode-hook
+            (lambda ()
+              (setq-local c-ts-mode-indent-style 'bsd)
+              (setq-local c-ts-mode-indent-offset 4)
+              (c-ts-mode-toggle-comment-style -1))))
 ; file associations
 
 
@@ -646,7 +723,9 @@
        (setq python-indent-offset 4)))
   )
 
- 
+
+(use-package spice-mode)
+
 ;(setq rust-format-on-save t)
 
 ; compilation-mode tweaks
