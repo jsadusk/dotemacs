@@ -21,7 +21,7 @@
 (elpaca-wait)
 
 (use-package tramp
-    :ensure (tramp :type git :host "git.savannah.gnu.org" :branch "master" :repo "git/tramp" :files (:defaults "lisp/*.el") :version (lambda (_) "2.8.1"))
+    :ensure t
     :config
   (setq tramp-verbose 0)
   (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
