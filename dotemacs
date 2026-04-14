@@ -21,7 +21,7 @@
 (elpaca-wait)
 
 (use-package tramp
-    :ensure (tramp :type git :host "git.savannah.gnu.org" :branch "master" :repo "git/tramp" :files (:defaults "lisp/*.el") :version (lambda (_) "2.8.1"))
+    :ensure t
     :config
   (setq tramp-verbose 0)
   (setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
@@ -61,8 +61,6 @@
     (add-to-list 'major-mode-remap-alist '(toml-mode . toml-ts-mode))
     (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
     (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
-    (add-to-list 'major-mode-remap-alist '(c++-ts-mode . c++-mode))
-    (add-to-list 'major-mode-remap-alist '(c-ts-mode . c-mode))
     (add-to-list 'default-frame-alist '(background-color . "black"))
     (add-to-list 'default-frame-alist '(foreground-color . "lightgrey"))
     (add-to-list 'default-frame-alist '(vertical-scroll-bars . nil))
@@ -104,8 +102,13 @@
   :custom
   (treesit-auto-install 'prompt)
   :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
+  ;(treesit-auto-add-to-auto-mode-alist 'all)
+  (add-to-list 'auto-mode-alist '("\\.c\\'" . c-mode))
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
+  (add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.hpp\\'" . c++-mode))
+                                        ;(global-treesit-auto-mode))
+  )
 
 (use-package org
   :init
@@ -285,12 +288,15 @@
 ;;     (nerd-icons-completion-mode)
 ;;     )
 
-;(use-package clang-format
-    ;:ensure nil
-;    :config
-;  (global-set-key (kbd "C-c i") 'clang-format-region)
-;  (global-set-key (kbd "C-c u") 'clang-format-buffer)
-;)
+(use-package clang-format
+    :ensure t
+    :bind
+    (("C-c f r" . clang-format-region)
+     ("C-c f b" . clang-format-buffer))
+    :hook
+    ((c-mode-common-hook . clang-format-on-save-mode))
+    )
+
 (use-package magit
     :config
   (define-key magit-mode-map [(control tab)] 'other-window)
@@ -328,13 +334,13 @@
   (setq rust-mode-treesitter-derive t))
 
 (use-package eglot
-    :ensure t
+    :ensure nil
     :bind
     (("C-." . eglot-code-actions))
 
     :config
-    (setq eglot-events-buffer-size 0)
-    (setq eglot-events-buffer-config '(:size 0 :format full))
+    ;(setq eglot-events-buffer-size 0)
+                                        ;(setq eglot-events-buffer-config '(:size 0 :format full))
 
  (setq-default eglot-code-action-indications '(-nearby))
  (defun eglot-format-if-managed ()
@@ -343,41 +349,53 @@
       (eglot-format-buffer)
       )
   )
- (add-hook 'before-save-hook 'eglot-format-if-managed)
+ ;(add-hook 'before-save-hook 'eglot-format-if-managed)
  :hook (
          (python-ts-mode . eglot-ensure)
          (c++-mode . eglot-ensure)
          (c-mode . eglot-ensure)
          (rust-ts-mode . eglot-ensure)
+         (cmake-ts-mode . eglot-ensure)
          )
+ :custom
+ (eglot-ignored-server-capabilities '(:documentOnTypeFormattingProvider))
   )
 
 (use-package ruff-format
     :diminish ruff-format-on-save-mode
     :hook
-    (
-     (python-ts-mode . ruff-format-on-save-mode)
-     )
+    ((python-ts-mode . ruff-format-on-save-mode))
+    :bind
+    (("C-c f r" . ruff-format-region)
+     ("C-c f b" . ruff-format-buffer))
     )
 
 (use-package flymake
+    :ensure t
     :diminish flymake-mode
     )
 
 (use-package flymake-popon)
-(use-package eldoc :ensure nil)
+(use-package eldoc
+    :ensure nil
+    :custom
+    (eldoc-idle-delay 2)
+    )
 (use-package eldoc-box
     :diminish eldoc-box-hover-mode
     :after eldoc
-    :config
-    (global-set-key (kbd "C-c C-d") 'eldoc-box-help-at-point)
     :hook
     (
      (eglot-managed-mode . eldoc-box-hover-mode)
      )
     )
-
-
+(use-package acp
+    :ensure (acp :type git :host github :repo "csheaff/acp.el" :branch "add-tramp-support")
+    )
+(use-package agent-shell
+    :ensure (agent-shell :type git :host github :repo "csheaff/agent-shell" :branch "gh-122-add-tramp-support")
+    :after acp
+    )
 (use-package breadcrumb)
 (use-package jinja2-mode)
 (use-package git-link)
@@ -428,9 +446,13 @@
 (use-package protobuf-mode)
 
 (use-package tramp-hlo
-    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo" :protocol ssh)
+    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo" :protocol ssh :branch "devel")
     :config
     (tramp-hlo-setup)
+    )
+
+(use-package mcp-server
+    :ensure (mcp-server :type git :host github :repo "rhblind/emacs-mcp-server" :protocol ssh :files ("*.el" "tools/*.el" "mcp-wrapper.py" "mcp-wrapper.sh"))
     )
 
 (use-package dape
@@ -471,7 +493,24 @@
   ;; (add-hook 'dape-on-start-hooks
   ;;           (defun dape--save-on-start ()
   ;;             (save-some-buffers t t)))
-
+   (add-to-list
+    'dape-configs
+    '(python-uv-run-file
+         ;; The command to run the debug adapter/program
+         :command (lambda (config)
+                    ;; Ensure the python executable path is correct for your uv venv
+                    (list (expand-file-name ".venv/bin/python")
+                          "-m" "debugpy.launcher"
+                          (format "--port=%s" (dape--get-port config))
+                          "--"
+                          (buffer-file-name)))
+         :name "Python (uv run file)"
+         :mode 'python-mode
+         :type "debugpy"
+         :request "launch"
+         :cwd default-directory
+         :console "internalConsole"
+         :justMyCode t))
   )
 
 (use-package bazel
@@ -668,35 +707,26 @@
 (require 'smart-split)
 (require 'compile-notifications)
 (require 'reopen-buffers)
+(require 'google-c-style)
 
 (use-package cc-mode
     :ensure nil
     :config
   (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
-  (defconst my-cc-style
-    '("gnu"
-      (c-offsets-alist . ((innamespace [0])
-			  (inextern-lang .[0])
-			  (arglist-intro . [6])))))
-  (c-add-style "my-cc-style" my-cc-style)
   (add-hook 'c++-mode-hook
-	    '(lambda ()
-	      (c-set-style "my-cc-style")
-	      (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)
-              ))
+	    'google-set-c-style)
   
-  (add-hook 'c--mode-hook
-	    '(lambda ()
-	      (setq tab-width 4 indent-tabs-mode nil c-basic-offset 4)))
+  (add-hook 'c-mode-hook
+	    'google-set-c-style)
   )
-(use-package c-ts-mode
-  :ensure nil
-  :init
-  (add-hook 'c-ts-mode-hook
-            (lambda ()
-              (setq-local c-ts-mode-indent-style 'bsd)
-              (setq-local c-ts-mode-indent-offset 4)
-              (c-ts-mode-toggle-comment-style -1))))
+;; (use-package c-ts-mode
+;;   :ensure nil
+;;   :init
+;;   (add-hook 'c-ts-mode-hook
+;;             (lambda ()
+;;               (setq-local c-ts-mode-indent-style 'bsd)
+;;               (setq-local c-ts-mode-indent-offset 4)
+;;               (c-ts-mode-toggle-comment-style -1))))
 ; file associations
 
 
@@ -726,6 +756,11 @@
 
 (use-package spice-mode)
 
+(use-package treesit-sexp
+    :ensure (treesit-sexp :type git :host github :repo "alexispurslane/treesit-sexp")
+    :config
+    (global-treesit-sexp-mode 1)
+    )
 ;(setq rust-format-on-save t)
 
 ; compilation-mode tweaks
@@ -746,3 +781,4 @@
 (if (file-exists-p "~/.emacs.local/local-init.el")
      (local-init))
 
+(put 'upcase-region 'disabled nil)
