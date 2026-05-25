@@ -334,7 +334,7 @@
   (setq rust-mode-treesitter-derive t))
 
 (use-package eglot
-    :ensure nil
+    :ensure t
     :bind
     (("C-." . eglot-code-actions))
 
@@ -358,7 +358,7 @@
          (cmake-ts-mode . eglot-ensure)
          )
  :custom
- (eglot-ignored-server-capabilities '(:documentOnTypeFormattingProvider))
+ (eglot-ignored-server-capabilities '(:documentOnTypeFormattingProvider :watchFiles))
   )
 
 (use-package ruff-format
@@ -389,13 +389,28 @@
      (eglot-managed-mode . eldoc-box-hover-mode)
      )
     )
-(use-package acp
-    :ensure (acp :type git :host github :repo "csheaff/acp.el" :branch "add-tramp-support")
-    )
+(use-package acp)
 (use-package agent-shell
-    :ensure (agent-shell :type git :host github :repo "csheaff/agent-shell" :branch "gh-122-add-tramp-support")
     :after acp
+    :config
+    (keymap-unset agent-shell-mode-map "C-<tab>")
+    (setq agent-shell-show-session-id t)
+    (setq )
+    (setq agent-shell-session-selection-columns
+      '(directory title date session-id))
     )
+(use-package agent-shell-tramp
+    :ensure (agent-shell-tramp :type git :host github :repo "junyi-hou/agent-shell-tramp")
+    :config
+    (agent-shell-tramp-mode 1)
+    )
+
+(use-package agent-shell-bookmark
+  :ensure (agent-shell-bookmark :type git
+                                :host github
+                                :repo "dcluna/agent-shell-bookmark")
+  :after agent-shell)
+
 (use-package breadcrumb)
 (use-package jinja2-mode)
 (use-package git-link)
@@ -403,22 +418,32 @@
 (use-package vterm
     :after eterm-256color
     :custom
-    (vterm-term-environment-variable "eterm-color")
+    (vterm-term-environment-variable "xterm-color")
     (vterm-max-scrollback 100000)
     :config
     (add-to-list 'vterm-eval-cmds '("xp-notify" xp-notify))
     (defun vterm-update-pwd (path &optional shortpath)
-      (let* ((connection (file-remote-p default-directory))
+      (let* ((connection (file-remote-p path))
              (shortpath (if shortpath shortpath path))
              (path (if (string-suffix-p "/" path) path (concat path "/") ))
-             (path (if connection (concat connection path) path))
+             ;(path (if connection (concat connection path) path))
              (shortpath (if connection (concat connection shortpath) shortpath))
              )
         (setq default-directory path)
         (rename-buffer (concat "*vterm: " shortpath) t)
         )
       )
+    (defun vterm-tramp-prefix ()
+      (vterm-send-string (file-remote-p default-directory))
+      )
+    (defun vterm-update-tramp (prefix)
+      (if (not (file-remote-p default-directory))
+          (setq default-directory (concat prefix ":" default-directory))
+          )
+      )
     (add-to-list 'vterm-eval-cmds '("vterm-update-pwd" vterm-update-pwd))
+    (add-to-list 'vterm-eval-cmds '("vterm-tramp-prefix" vterm-tramp-prefix))
+    (add-to-list 'vterm-eval-cmds '("vterm-update-tramp" vterm-update-tramp))
     )
 (use-package multi-vterm
     :config
@@ -446,13 +471,15 @@
 (use-package protobuf-mode)
 
 (use-package tramp-hlo
-    :ensure (tramp-hlo :type git :host github :repo "jsadusk/tramp-hlo" :protocol ssh :branch "devel")
+    :ensure (tramp-hlo :type git :host github :repo "WJCFerguson/tramp-hlo" :protocol ssh :branch "fix-for-proj-dired")
     :config
     (tramp-hlo-setup)
     )
 
 (use-package mcp-server
     :ensure (mcp-server :type git :host github :repo "rhblind/emacs-mcp-server" :protocol ssh :files ("*.el" "tools/*.el" "mcp-wrapper.py" "mcp-wrapper.sh"))
+    :config
+    (mcp-server-start)
     )
 
 (use-package dape
@@ -708,6 +735,7 @@
 (require 'compile-notifications)
 (require 'reopen-buffers)
 (require 'google-c-style)
+(require 'agent-skills)
 
 (use-package cc-mode
     :ensure nil
@@ -760,6 +788,12 @@
     :ensure (treesit-sexp :type git :host github :repo "alexispurslane/treesit-sexp")
     :config
     (global-treesit-sexp-mode 1)
+    )
+
+(use-package brain
+    :ensure (brain :type git :host github :protocol ssh :repo "jsadusk/adhd-brain")
+    :config
+    (brain-install-keybindings)
     )
 ;(setq rust-format-on-save t)
 
