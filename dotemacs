@@ -205,7 +205,9 @@
 (use-package eat)
 
 (use-package bui)
-(use-package posframe)
+(use-package posframe
+    :ensure t
+    )
 (use-package vertico
      :init
      (vertico-mode))
@@ -715,7 +717,7 @@
     :ensure (visual-replace :type git :host github :repo "szermatt/visual-replace")
     )
 
-(use-package hydra)
+(use-package hydra :ensure t)
 
 (use-package hcl-mode)
 
