@@ -31,6 +31,9 @@
   (add-to-list 'tramp-remote-path "~/.local/bin/")
   (add-to-list 'tramp-remote-path "~/.cargo/bin/")
   (add-to-list 'tramp-remote-path "~/bin/")
+  (delete "LC_CTYPE=''" tramp-remote-process-environment)
+  (add-to-list 'tramp-remote-process-environment "LC_CTYPE=en_US.UTF-8")
+  (add-to-list 'tramp-remote-process-environment "LC_CTYPE=C")
   (setq vc-handled-backends '())
   (setq remote-file-name-inhibit-locks t)
   (setq vc-follow-symlinks t)
@@ -40,6 +43,7 @@
 
 (use-package emacs
     :ensure nil
+
     :bind
     (
      ("C-<tab>" . other-window)
@@ -85,6 +89,7 @@
     (global-so-long-mode)
     (pixel-scroll-precision-mode)
     (when (eq system-type 'darwin)
+      (setenv "LC_CTYPE" "en_US.UTF-8")
       (setq visible-bell nil)
       (setq ring-bell-function 'ignore)
       (setq mac-command-modifier 'meta)
@@ -93,7 +98,7 @@
     (savehist-mode)
     (server-start)
     )
-
+(use-package cuda-mode)
 ;(use-package ert)
 
 (use-package transient)
@@ -341,6 +346,9 @@
     (("C-." . eglot-code-actions))
 
     :config
+    (when (eq system-type 'darwin)
+      (setq eglot-max-file-watches 512)
+      )
     ;(setq eglot-events-buffer-size 0)
                                         ;(setq eglot-events-buffer-config '(:size 0 :format full))
 
@@ -417,6 +425,20 @@
 (use-package jinja2-mode)
 (use-package git-link)
 (use-package eterm-256color)
+
+(defun term-update-pwd (path &optional shortpath do-default-directory)
+  (let* ((connection (file-remote-p path))
+         (shortpath (if shortpath shortpath path))
+         (path (if (string-suffix-p "/" path) path (concat path "/") ))
+                                        ;(path (if connection (concat connection path) path))
+         (shortpath (if connection (concat connection shortpath) shortpath))
+         )
+    (if do-default-directory
+        (setq default-directory path))
+    (rename-buffer (concat "*term: " shortpath) t)
+    )
+  )
+
 (use-package vterm
     :after eterm-256color
     :custom
@@ -447,6 +469,31 @@
     (add-to-list 'vterm-eval-cmds '("vterm-tramp-prefix" vterm-tramp-prefix))
     (add-to-list 'vterm-eval-cmds '("vterm-update-tramp" vterm-update-tramp))
     )
+
+(use-package ghostel
+    :ensure t
+    :bind
+    (
+     ("C-x m" . ghostel-new)
+     :map ghostel-semi-char-mode-map
+          ("C-<tab>" . other-window)
+          )
+    :custom
+    (ghostel-buffer-name-function 'ghostel-buffer-name-by-directory)
+    (ghostel-tramp-shell-integration t)
+    :config
+    (defun ghostel-new ()
+      (interactive)
+      (ghostel "new")
+      )
+    (add-to-list 'ghostel-eval-cmds '("term-update-pwd" term-update-pwd))
+    )
+
+;(use-package ghostel-compile
+;    :hook (after-init . ghostel-compile-global-mode))
+;(use-package ghostel-comint
+;    :hook (after-init . ghostel-comint-global-mode))
+
 (use-package multi-vterm
     :config
   (defun project-vterm ()
@@ -465,7 +512,17 @@
     )
   )
 (use-package scad-mode)
-
+(use-package scad-dbus
+  :ensure (scad-dbus :type git
+                     :host github
+                     :repo "Lenbok/scad-dbus"
+                     :branch "master")
+  :bind
+  (
+   :map scad-mode-map
+        ("C-c o" . 'hydra-scad-dbus/body))
+    
+    )
 (electric-pair-mode 1)
 (use-package rg)
 (use-package expand-region
@@ -792,11 +849,9 @@
     (global-treesit-sexp-mode 1)
     )
 
-(use-package brain
-    :ensure (brain :type git :host github :protocol ssh :repo "jsadusk/adhd-brain")
-    :config
-    (brain-install-keybindings)
-    )
+(use-package cnc-mode
+    :ensure (cnc-mode :type git :host github :repo "matthijsk/cnc-mode"))
+
 ;(setq rust-format-on-save t)
 
 ; compilation-mode tweaks
